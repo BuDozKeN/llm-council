@@ -1,4 +1,4 @@
-# Simple AF Jobs - Business Context
+# SimpleAF - Business Context
 
 **For LLM Council Decision-Making**
 

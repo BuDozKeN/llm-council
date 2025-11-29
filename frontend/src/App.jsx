@@ -9,11 +9,27 @@ function App() {
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [businesses, setBusinesses] = useState([]);
+  const [selectedBusiness, setSelectedBusiness] = useState(null);
 
-  // Load conversations on mount
+  // Load conversations and businesses on mount
   useEffect(() => {
     loadConversations();
+    loadBusinesses();
   }, []);
+
+  const loadBusinesses = async () => {
+    try {
+      const bizList = await api.listBusinesses();
+      setBusinesses(bizList);
+      // Auto-select first business if available
+      if (bizList.length > 0 && !selectedBusiness) {
+        setSelectedBusiness(bizList[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load businesses:', error);
+    }
+  };
 
   // Load conversation details when selected
   useEffect(() => {
@@ -89,7 +105,7 @@ function App() {
         messages: [...prev.messages, assistantMessage],
       }));
 
-      // Send message with streaming
+      // Send message with streaming (with business context)
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -169,7 +185,7 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      });
+      }, selectedBusiness);
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
@@ -193,6 +209,9 @@ function App() {
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
+        businesses={businesses}
+        selectedBusiness={selectedBusiness}
+        onSelectBusiness={setSelectedBusiness}
       />
     </div>
   );

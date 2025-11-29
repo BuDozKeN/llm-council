@@ -9,6 +9,9 @@ export default function ChatInterface({
   conversation,
   onSendMessage,
   isLoading,
+  businesses = [],
+  selectedBusiness,
+  onSelectBusiness,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -122,22 +125,42 @@ export default function ChatInterface({
 
       {conversation.messages.length === 0 && (
         <form className="input-form" onSubmit={handleSubmit}>
-          <textarea
-            className="message-input"
-            placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={3}
-          />
-          <button
-            type="submit"
-            className="send-button"
-            disabled={!input.trim() || isLoading}
-          >
-            Send
-          </button>
+          {businesses.length > 0 && (
+            <div className="business-selector">
+              <label htmlFor="business-select">Business Context:</label>
+              <select
+                id="business-select"
+                value={selectedBusiness || ''}
+                onChange={(e) => onSelectBusiness(e.target.value || null)}
+                disabled={isLoading}
+              >
+                <option value="">(No Context)</option>
+                {businesses.map((biz) => (
+                  <option key={biz.id} value={biz.id}>
+                    {biz.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="input-row">
+            <textarea
+              className="message-input"
+              placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+              rows={3}
+            />
+            <button
+              type="submit"
+              className="send-button"
+              disabled={!input.trim() || isLoading}
+            >
+              Send
+            </button>
+          </div>
         </form>
       )}
     </div>
