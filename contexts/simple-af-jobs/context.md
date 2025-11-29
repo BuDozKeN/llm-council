@@ -42,6 +42,11 @@
 - 50% - Founder/CTO (technology decision-maker, calls shots on technology, built all prompts/logic/QC)
 - 50% - Partner company (research company, ~5 years old, multiple shareholders)
 
+**Partner Alignment:**
+- Both partners want the same thing: $5M minimum exit in ~18 months
+- Fully aligned on price and timeline
+- No conflict between partners on strategy
+
 **Team:**
 - Founder/CTO - Built all prompts, QC processes, assessment logic
 - Developer (India) - $1,000 USD/week, implements platform code
@@ -225,11 +230,34 @@ Example:
 - **Turnaround:** Next business day delivery
 - **Process:** Manual execution through Claude Code
 
+### Bus Factor Reality (CRITICAL):
+- **If founder gone tomorrow:** NO ONE could run this business
+- Business is 100% dependent on founder for operations
+- Currently operating as a SERVICE, not a self-running SaaS
+
+### Automation vs Manual Breakdown:
+**What's AUTOMATED (good chunk):**
+- Alexandra Profiler analysis engine
+- Candidate scoring and ranking
+- Report generation
+- Voice capture with Alexandra
+
+**What's MANUAL (founder-dependent):**
+1. Copy/paste job transcript into Claude
+2. Iterate with Claude to get Sales Navigator search strategy (LinkedIn URL)
+3. Review candidates from LinkedIn search
+4. Input URL + candidate JSON into Alexandra Profiler
+5. Select which candidates to shortlist for client
+6. Quality control on final output
+
+**Current Model:** Service (manual) → **Future Model:** SaaS (automated with Core Signal)
+
 ### Why Manual Process Exists (Intentional):
 1. **Learning phase** - Understanding edge cases and failure modes
 2. **Quality control** - CTO validates every output before delivery
 3. **Prompt refinement** - Continuous improvement of assessment logic
 4. **Trust building** - Ensure output quality before automating
+5. **LinkedIn grey area** - Manual keeps liability on recruiter's account
 
 ### Future Operations Plan:
 - **Hire operations person** at ~€600/month
@@ -303,9 +331,17 @@ Example:
 ## Code Ownership & IP Risks
 
 ### Current Situation:
-- **No NDA in place** with developer
+- **No NDA in place** with developer (yet)
 - Developer implemented platform code
-- CTO owns prompts, logic, QC processes (the "brains")
+- **Developer HAS access to prompts** - prompts are NOT kept separate
+- CTO owns the know-how, customers, clients; developer is the tech brain
+
+### Developer Relationship & Incentive Plan:
+- Developer knows about the exit strategy goal
+- **Plan:** Offer phantom shares in the company as incentive
+- **Goal:** Give developer vested interest in success + dividends as company grows
+- **NDA:** Will be requested as standard practice once phantom shares are set up
+- Developer identified as a risk, but being mitigated with equity incentive
 
 ### Founder Access (Bus Factor Mitigated):
 - **Full GitHub access:** YES - Founder has complete repository access
@@ -384,18 +420,29 @@ Future data source—a comprehensive LinkedIn dataset that will replace manual S
 
 ## Exit Strategy (The Exit Horizon)
 
+### CLARIFICATION: NOT "Sell Now"
+- **No intention to sell immediately**
+- Plan is to BUILD → GET CUSTOMERS → GENERATE REVENUE → SELL in 18 months
+- No burnout, no cash panic, no partner conflict, no inbound offer
+- This is a planned growth-to-exit strategy, not a fire sale
+
 ### Timeline: 18 months maximum
 - **Rationale:** AI moves fast; window of opportunity is limited
 - Must achieve exit-ready state by mid-2027
 
-### Target Exit Number: $5 million
+### Target Exit Number: $5 million (minimum)
 - 50/50 ownership split = $2.5 million per partner
 - "Life-changing number" that makes both founders happy
+- Both partners fully aligned on this number and timeline
 
 ### Investment Appetite: 100% Bootstrapped
 - **NOT open to angel investors** or outside funding
 - Must achieve exit through organic revenue growth
 - All growth funded from runway + revenue
+
+### Earn-out Willingness: TBD
+- Not determined yet whether clean break or employee transition preferred
+- Open to discussing acqui-hire scenarios when the time comes
 
 ---
 
@@ -469,9 +516,17 @@ Tech stack choices are NOT constraints—council can suggest alternatives if ben
 
 **Sales Data (Honest Assessment):**
 - **Total paying customers:** 1
+- **Additional sales since Nov 28:** No (Nov 28 was Friday, today is Nov 29)
 - **Repeat purchase data:** None yet (too early)
 - **Main objection when people don't buy:** Unknown (insufficient sample size)
 - **First customer acquisition method:** LinkedIn outreach campaign
+- **Sales target:** Start selling actively in November-December 2025
+
+**Pipeline / Potential Buyers:**
+- **Company buyers (acquirers):** Starting from zero - no list of potential acquirers yet
+- **Platform users (customers):** YES - have recruiters wanting to USE the platform
+- Pipeline consists of potential USERS, not potential company buyers
+- Need to build acquirer list as part of exit strategy
 
 **Validation:**
 - Platform delivers value that beta users return for
