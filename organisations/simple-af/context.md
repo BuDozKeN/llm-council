@@ -1,7 +1,7 @@
 # SimpleAF - Business Context
 
 **For LLM Council Decision-Making**
-**Last Updated:** 2025-11-29
+**Last Updated:** 2025-11-30
 
 ---
 
@@ -80,9 +80,21 @@
 - Volume-based work where manual screening is a bottleneck
 - Can't afford enterprise recruitment tools
 
-**Current Status:** Beta testing with different industries and styles to validate product-market fit.
+**Current Status:** Still in beta—validating ICP with early customers.
 
-**Industries Validated:**
+### Ideal Customer Profile (Early Signals)
+
+**Best Fit:**
+- Recruiters working on *hard-to-find* roles (niche skills, obscure titles, specific combinations of experience)
+- Contingency recruiters who need speed and precision
+
+**Less Ideal Fit:**
+- Roles that are easy to search (e.g., standard tech roles, legal recruiters searching for common titles within corporates)
+- Corporate/enterprise clients—they typically require fixed monthly pricing, which cannot yet be offered
+
+**Agency Size:** Too early to determine whether solo recruiters or 10-person agencies show stronger engagement.
+
+### Industries Validated:
 - Legal professionals (Solicitors - Commercial, Regulatory, Corporate)
 - Executive-level roles (VP of Talent, Strategy Managers)
 - Finance professionals (M&A advisors, Commercial negotiators)
@@ -94,7 +106,7 @@
 
 ## Pricing & Business Model
 
-**Current Model:** Fixed price per analysis
+**Current Model:** Fixed price per analysis (pay-per-job, not subscription)
 
 - **Price:** $49 USD per analysis
 - **Fixed cost:** $10 per analysis
@@ -102,6 +114,18 @@
 - **Maximum candidates:** 200 per analysis
 - **Raw cost to Simple AF:** ~$20 per analysis
 - **Gross margin:** ~$29 per analysis (~59%)
+
+### Pricing Rationale: The "Why The Fuck Not?" Price
+$49 is a no-brainer entry point designed to eliminate friction and encourage trial. At this price, the decision to purchase requires minimal deliberation.
+
+**Competitor Comparison:** Juicebox charges ~$179/month on a subscription model. Simple AF charges per job, not per month—aligning cost directly with value delivered.
+
+**Higher Price Points ($99–$149):** Not yet tested. Open question: given the "litigation-proof" quality positioning, should higher price points be trialled?
+
+### Target Usage Model
+**Baseline:** Minimum 10 searches per month per client
+
+Revenue model assumes a "happy" recruiter will run at least 10 job searches per month. This is the baseline for sustainable unit economics.
 
 **Future Plans:** Subscription tiers (not yet implemented)
 
@@ -225,30 +249,28 @@ Example:
 
 ## Current Operations & Manual Process
 
-### Time Breakdown Per Analysis:
-- **Total CTO time:** ~1 hour 15 minutes per analysis
-- **Turnaround:** Next business day delivery
-- **Process:** Manual execution through Claude Code
+### Automation Level: ~60% Automated / 40% Manual
 
-### Bus Factor Reality (CRITICAL):
-- **If founder gone tomorrow:** NO ONE could run this business
-- Business is 100% dependent on founder for operations
-- Currently operating as a SERVICE, not a self-running SaaS
+**Turnaround:** Next business day delivery
 
-### Automation vs Manual Breakdown:
-**What's AUTOMATED (good chunk):**
-- Alexandra Profiler analysis engine
-- Candidate scoring and ranking
-- Report generation
-- Voice capture with Alexandra
+### What's AUTOMATED:
+- AI voice agent (Alexandra) captures job briefs via phone or platform
+- Notification system alerts team to new briefs
+- Transcript extraction via Claude Code (using GitHub markdown)
+- Sales Navigator search strategy generation (boolean filters, URL creation)
+- Candidate data scraping from Sales Navigator into platform (15–20 min runtime)
+- Candidate sorting against must-have/good-to-have criteria
+- JSON file generation with candidate data
+- Alexandra Profiler runs candidate reports against job brief
 
-**What's MANUAL (founder-dependent):**
-1. Copy/paste job transcript into Claude
-2. Iterate with Claude to get Sales Navigator search strategy (LinkedIn URL)
-3. Review candidates from LinkedIn search
-4. Input URL + candidate JSON into Alexandra Profiler
-5. Select which candidates to shortlist for client
-6. Quality control on final output
+### What's MANUAL (founder-dependent):
+1. Copy-pasting job brief into Claude Code
+2. Iterating with Claude Code on search strategy until satisfied
+3. Verifying candidate count in LinkedIn before confirming search
+4. Final review and shortlisting based on Alexandra Profiler output
+
+### Technical Blocker:
+**None.** This is a resource constraint, not a technical limitation. Developer is prioritising client-facing experience (polished UI, seamless user journey) over backend automation. Strategic decision: product should *feel* fully automated to customers whilst manual work happens "under the hood" in the interim. Developer is actively closing this gap.
 
 **Current Model:** Service (manual) → **Future Model:** SaaS (automated with Core Signal)
 
@@ -279,11 +301,17 @@ Example:
 - "Evidence-based output you can trust without hours of review"
 - "Results delivered next business day"
 
-### Conversion Funnel:
-1. LinkedIn outreach → Interest
-2. Demo/trial analysis → Value demonstration
-3. First paid analysis → Customer acquisition
-4. Repeat usage → Retention
+### Conversion Funnel & Metrics:
+
+| Stage | Metric | Notes |
+|-------|--------|-------|
+| Connection → Interest | 10–15% | Express interest in testing the platform |
+| Interest → Trial | ~10% | Of 100 recruiters targeted, ~10 sign up for free trial |
+| Trial → Paid | TBD | Insufficient data (too early in funnel) |
+
+**Funnel Model:** Standard SaaS free-trial approach—offer a few searches at no cost to demonstrate value before conversion.
+
+**Summary:** For every 100 recruiters targeted, approximately 10 enter the platform for a free trial. Paid conversion data is pending.
 
 ---
 
@@ -338,10 +366,16 @@ Example:
 
 ### Developer Relationship & Incentive Plan:
 - Developer knows about the exit strategy goal
-- **Plan:** Offer phantom shares in the company as incentive
+- **Plan:** Offer phantom/ghost shares in the company as incentive
 - **Goal:** Give developer vested interest in success + dividends as company grows
-- **NDA:** Will be requested as standard practice once phantom shares are set up
-- Developer identified as a risk, but being mitigated with equity incentive
+
+**Timeline:** Immediately upon UK company incorporation.
+
+Once the UK entity is established:
+1. Execute an NDA agreement with the developer
+2. Issue phantom/ghost shares to ensure long-term alignment and incentivisation
+
+This is recognised as a **binary risk factor** and will be addressed as a priority.
 
 ### Founder Access (Bus Factor Mitigated):
 - **Full GitHub access:** YES - Founder has complete repository access
@@ -416,6 +450,12 @@ Example:
 ### Core Signal Integration:
 Future data source—a comprehensive LinkedIn dataset that will replace manual Sales Navigator exports and enable faster, more scalable candidate sourcing. This also resolves LinkedIn ToS grey areas.
 
+**Target Timeline:** Early January 2025 (~4–5 weeks from November 2025)
+
+This is a priority integration that moves the platform from "grey area" Sales Navigator scraping to a compliant, "white hat" data source.
+
+**Dependency:** Developer bandwidth—not a revenue milestone. Work needs to commence as soon as possible to meet this timeline.
+
 ---
 
 ## Exit Strategy (The Exit Horizon)
@@ -440,9 +480,27 @@ Future data source—a comprehensive LinkedIn dataset that will replace manual S
 - Must achieve exit through organic revenue growth
 - All growth funded from runway + revenue
 
-### Earn-out Willingness: TBD
-- Not determined yet whether clean break or employee transition preferred
-- Open to discussing acqui-hire scenarios when the time comes
+### Exit Valuation (Knowledge Gap)
+Standard multiples for tech/SaaS exits are unknown to founder. Council guidance needed on:
+- What revenue multiple is realistic (3x? 5x? Higher for IP-heavy businesses?)
+- Whether $5M target should be based on ARR or technology/IP valuation
+- What ARR milestone is needed to command that valuation
+
+### Target Acquirers (Hypothesis Needed)
+No current hypothesis on likely acquirer. Possible categories for Council to explore:
+
+| Category | Examples | Rationale |
+|----------|----------|-----------|
+| **Competitor** | LinkedIn, Juicebox | Acquire to kill or absorb features |
+| **Customer Upstream** | Large recruitment agency | Seeking competitive differentiation |
+| **Platform** | Greenhouse, Ashby, Bullhorn (ATS providers) | Add sourcing capabilities to existing platform |
+
+Council input requested on which category to prioritise and how to position accordingly.
+
+### Founder Role Post-Exit
+**Position:** Open to earn-out of up to 12 months maximum.
+
+Willing to support a transition period for continuity, but a multi-year (2+ year) earn-out is not desirable. A clean break after 12 months would be the preferred outcome.
 
 ---
 
@@ -519,7 +577,7 @@ Tech stack choices are NOT constraints—council can suggest alternatives if ben
 - **Additional sales since Nov 28:** No (Nov 28 was Friday, today is Nov 29)
 - **Repeat purchase data:** None yet (too early)
 - **Main objection when people don't buy:** Unknown (insufficient sample size)
-- **First customer acquisition method:** LinkedIn outreach campaign
+- **First customer acquisition method:** Warm referral from Greg (50% co-owner)—not a cold outreach conversion
 - **Sales target:** Start selling actively in November-December 2025
 
 **Pipeline / Potential Buyers:**
@@ -551,3 +609,22 @@ When making recommendations for Simple AF Jobs:
 - Approaches that sacrifice output quality for speed
 - High-cost solutions when cheaper alternatives exist
 - Solutions that increase founder dependency
+
+---
+
+## Key Decisions Pending Council Input
+
+*Last Updated: 2025-11-30*
+
+| Area | Current Status | Council Input Needed |
+|------|----------------|---------------------|
+| Automation | 60/40 split — developer actively closing gap | None immediately |
+| Funnel Conversion | 10% to trial; paid conversion TBD | Monitor and revisit in 30 days |
+| Core Signal | Target early Jan 2025 | Confirm priority vs. other dev work |
+| Developer IP | Pending UK incorporation | Expedite as binary risk |
+| Pricing | $49 "WTFN" price | Should we test $99–$149? |
+| ICP | Hard-to-find roles; contingency recruiters | Validate with next 10 customers |
+| Usage Model | 10 searches/month baseline | Confirm unit economics |
+| Exit Multiple | Unknown | Council to advise on realistic range |
+| Acquirer Hypothesis | None yet | Council to help identify targets |
+| Earn-out | Max 12 months acceptable | Factor into positioning |
