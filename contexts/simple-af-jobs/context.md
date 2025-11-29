@@ -201,6 +201,132 @@ Example:
 
 ---
 
+## Current Operations & Manual Process
+
+### Time Breakdown Per Analysis:
+- **Total CTO time:** ~1 hour 15 minutes per analysis
+- **Turnaround:** Next business day delivery
+- **Process:** Manual execution through Claude Code
+
+### Why Manual Process Exists (Intentional):
+1. **Learning phase** - Understanding edge cases and failure modes
+2. **Quality control** - CTO validates every output before delivery
+3. **Prompt refinement** - Continuous improvement of assessment logic
+4. **Trust building** - Ensure output quality before automating
+
+### Future Operations Plan:
+- **Hire operations person** at ~€600/month
+- Role: Execute manual steps currently done by CTO
+- Goal: Free CTO time for product development
+- Timeline: When revenue supports headcount
+
+---
+
+## Customer Acquisition Strategy
+
+### Current Approach: LinkedIn Campaigns
+- Targeted outreach to contingency recruiters
+- Focus on small recruitment agencies
+- Emphasize speed, cost, and quality differentiators
+
+### Sales Messaging:
+- "$49 per search vs $9,000/year for LinkedIn Recruiter"
+- "Evidence-based output you can trust without hours of review"
+- "Results delivered next business day"
+
+### Conversion Funnel:
+1. LinkedIn outreach → Interest
+2. Demo/trial analysis → Value demonstration
+3. First paid analysis → Customer acquisition
+4. Repeat usage → Retention
+
+---
+
+## Pricing Details & Token System
+
+### Current Model:
+- **Price:** $49 USD per analysis
+- **Alternative:** Token system - 500 tokens = $50
+- **Maximum candidates:** 200 per analysis
+
+### Cost Structure:
+- **Fixed cost per analysis:** $10 (platform, API base)
+- **Variable cost:** $0.05 per candidate analyzed
+- **Raw cost:** ~$20 per analysis (at 200 candidates)
+- **Gross margin:** ~$29 per analysis (~59%)
+
+### Break-Even Analysis:
+- Need to cover: Developer ($4,000/month) + Operations + Infrastructure
+- At $29 margin: ~140 analyses/month to break even on developer alone
+- Current stage: First paying customer acquired 2025-11-28
+
+---
+
+## Legal & Compliance
+
+### Liability Framework:
+- **Key principle:** Liability rests with the recruiter, NOT Simple AF
+- Platform provides analysis and recommendations
+- Recruiters make final hiring decisions
+- Evidence-based output provides audit trail for recruiter's defense
+
+### LinkedIn Terms of Service:
+- **Current approach:** Grey area with Sales Navigator exports
+- Manual data export by recruiter (their account, their risk)
+- **Future solution:** Core Signal integration eliminates ToS concerns
+- Core Signal = legitimate LinkedIn dataset with proper licensing
+
+### Data Protection:
+- No candidate PII stored long-term
+- Analysis data retained for client delivery only
+- Platform designed with privacy by design principles
+
+---
+
+## Code Ownership & IP Risks
+
+### Current Situation:
+- **No NDA in place** with developer
+- Developer implemented platform code
+- **Developer controls deployment keys/access**
+- CTO owns prompts, logic, QC processes (the "brains")
+
+### Risk Assessment:
+- **Critical risk:** If developer leaves, platform operation at risk
+- Developer has implementation knowledge
+- No documentation of deployment procedures
+- Single point of failure for technical operations
+
+### Mitigation Strategy:
+- Get documentation of all deployment procedures
+- Establish NDA/IP assignment agreement
+- Create backup access to all systems
+- Long-term: Reduce dependency on single developer
+
+---
+
+## User Experience & Friction Points
+
+### Friction Points Identified:
+1. Manual export from LinkedIn Sales Navigator (user effort)
+2. Wait time for next-business-day delivery
+3. Learning curve for job brief capture
+4. No self-service dashboard yet
+
+### Improvements Made:
+- Voice capture option (call Alexandra) reduces friction
+- Document upload alternative for existing JDs
+- Structured report format for easy review
+- Clear scoring bands for quick decision-making
+
+### Planned Improvements:
+- Core Signal integration (eliminates manual export)
+- Same-hour turnaround (automation)
+- Self-service dashboard
+- Progress tracking during analysis
+
+---
+
 ## Current State & Roadmap
 
 ### What Works Today:
@@ -211,14 +337,16 @@ Example:
 - Evidence-based report generation
 
 ### Current Bottleneck:
-- Requires CTO time doing manual work
+- Requires CTO time doing manual work (~1h15m per analysis)
 - Relies on Claude Code to run prompts manually
 - Automation not yet complete in the system
 - Platform exists but workflow requires human intervention
 
 ### Near-Term Roadmap:
+- Hire operations person to handle manual execution
 - Automate the manual steps currently requiring CTO intervention
 - Complete platform automation end-to-end
+- Establish proper IP/NDA agreements with developer
 
 ### Ultimate Goal:
 1. User calls Alexandra OR provides a document
@@ -228,7 +356,7 @@ Example:
 5. **Results delivered within the hour**
 
 ### Core Signal Integration:
-Future data source—a comprehensive LinkedIn dataset that will replace manual Sales Navigator exports and enable faster, more scalable candidate sourcing.
+Future data source—a comprehensive LinkedIn dataset that will replace manual Sales Navigator exports and enable faster, more scalable candidate sourcing. This also resolves LinkedIn ToS grey areas.
 
 ---
 
