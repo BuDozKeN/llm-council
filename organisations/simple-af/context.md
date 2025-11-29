@@ -351,26 +351,6 @@ Example:
 
 ---
 
-## Pricing Details & Token System
-
-### Current Model:
-- **Price:** $49 USD per analysis
-- **Alternative:** Token system - 500 tokens = $50
-- **Maximum candidates:** 200 per analysis
-
-### Cost Structure:
-- **Fixed cost per analysis:** $10 (platform, API base)
-- **Variable cost:** $0.05 per candidate analyzed
-- **Raw cost:** ~$20 per analysis (at 200 candidates)
-- **Gross margin:** ~$29 per analysis (~59%)
-
-### Break-Even Analysis:
-- Need to cover: Developer ($4,000/month) + Operations + Infrastructure
-- At $29 margin: ~140 analyses/month to break even on developer alone
-- Current stage: First paying customer acquired 2025-11-28
-
----
-
 ## Legal & Compliance
 
 ### Liability Framework:
@@ -586,25 +566,6 @@ When advising Simple AF Jobs, the council should prioritize in this order:
 **What's NOT a constraint for council decisions:**
 - Tech stack choices (Python, Streamlit, etc.) - operational detail
 - AI provider choices (Claude, OpenAI) - operational detail
-
----
-
-## Current Constraints & Risks
-
-### Primary Bottleneck: Founder/CTO
-- Founder does manual work that should be automated
-- Founder built all the prompts, QC processes, and assessment logic
-- No qualified staff to take this over currently
-- Time spent on tasks that shouldn't require founder involvement
-
-### Key Business Risk: Single Developer Dependency
-- One developer in India ($1,000 USD/week)
-- No visibility or control over what he does
-- He implemented the platform code
-- **Critical risk: If he leaves, the business could collapse**
-- Founder has the "brains" (prompts, logic), developer has the implementation
-
-**Working On:** Automating manual steps to reduce founder dependency and enable the platform to self-run.
 
 ---
 
