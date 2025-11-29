@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 
 # Base directory for business contexts
-CONTEXTS_DIR = Path(__file__).parent.parent / "contexts"
+CONTEXTS_DIR = Path(__file__).parent.parent / "organisations"
 
 
 def list_available_businesses() -> List[Dict[str, str]]:
