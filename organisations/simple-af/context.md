@@ -94,6 +94,15 @@
 
 **Agency Size:** Too early to determine whether solo recruiters or 10-person agencies show stronger engagement.
 
+### Strategic ICP Question (Unresolved)
+
+| Role Type | Characteristics | Trade-off |
+|-----------|-----------------|-----------|
+| **"Easy" roles** | Clear titles (SDR, Sales, Finance) | Easier to search, faster to serve, but may be lower-value |
+| **"Hard" roles** | Niche skills, obscure titles, specific experience combos | More iteration required, but justifies premium pricing and differentiates |
+
+**Council Question:** Should we focus on "easy" roles to build volume and refine operations, or target "hard" roles to differentiate and justify premium pricing?
+
 ### Industries Validated:
 - Legal professionals (Solicitors - Commercial, Regulatory, Corporate)
 - Executive-level roles (VP of Talent, Strategy Managers)
@@ -121,6 +130,13 @@ $49 is a no-brainer entry point designed to eliminate friction and encourage tri
 **Competitor Comparison:** Juicebox charges ~$179/month on a subscription model. Simple AF charges per job, not per month—aligning cost directly with value delivered.
 
 **Higher Price Points ($99–$149):** Not yet tested. Open question: given the "litigation-proof" quality positioning, should higher price points be trialled?
+
+### Pricing Feedback Received
+- One prospect at earlier $75 price point: *"If you can provide relevancy, you're doing extremely well"*
+- At $49, no pushback received (neither "too expensive" nor "suspiciously cheap")
+- **Founder's instinct:** Based on competitor pricing (Juicebox ~$179/month), $49/job feels very cheap—but prioritising volume, usage, and feedback over margin optimisation at this stage
+
+**Council Question:** Once we have 20–30 paying customers, should we A/B test $79 or $99 price points?
 
 ### Target Usage Model
 **Baseline:** Minimum 10 searches per month per client
@@ -281,11 +297,27 @@ Example:
 4. **Trust building** - Ensure output quality before automating
 5. **LinkedIn grey area** - Manual keeps liability on recruiter's account
 
-### Future Operations Plan:
-- **Hire operations person** at ~€600/month
-- Role: Execute manual steps currently done by CTO
-- Goal: Free CTO time for product development
-- Timeline: When revenue supports headcount
+### The Bridge Model: Founder → Operator → Full Automation
+
+**Strategy:** Bridge the gap between "founder-dependent manual work" and "fully automated SaaS" with a low-cost human operator.
+
+**Phase 1 (Current):** Founder runs every analysis to master and refine prompts. Each iteration improves reliability and reduces decision-making required.
+
+**Phase 2 (Near-term):** Hire operator from Eastern Europe or India at ~**€600/month**.
+
+**The Alexandra Copilot Workflow with Operator:**
+1. Client calls Alexandra (AI voice agent) → call transcript generated automatically
+2. System automatically runs Transcript Extract and Sales Navigator Strategy
+3. **Human intervention:** €600/month operator interacts with Alexandra Copilot to refine and finalise the Sales Navigator search strategy (outputs LinkedIn URL)
+4. Operator shares URL with platform → platform scrapes and returns candidates
+5. JSON candidate data automatically processed by Alexandra Profiler against job transcript
+6. Final shortlist delivered to client
+
+**Economics:** At €600/month, operator cost covered by ~21 analyses (at $29 margin). This allows scaling beyond founder capacity without requiring full automation or six-figure developer salaries.
+
+**Phase 3 (End State):** Core Signal integration removes need for Sales Navigator scraping entirely—full automation with zero human intervention.
+
+**Key Point:** Every analysis the founder runs today is an investment in process documentation. When the operator joins, they inherit a battle-tested playbook, not a blank canvas.
 
 ---
 
@@ -303,35 +335,19 @@ Example:
 
 ### Conversion Funnel & Metrics:
 
-| Stage | Metric | Notes |
-|-------|--------|-------|
-| Connection → Interest | 10–15% | Express interest in testing the platform |
-| Interest → Trial | ~10% | Of 100 recruiters targeted, ~10 sign up for free trial |
-| Trial → Paid | TBD | Insufficient data (too early in funnel) |
+| Stage | Metric | Raw Numbers |
+|-------|--------|-------------|
+| LinkedIn DMs sent | Baseline | ~100 |
+| DM → Interest/Accept | 10–15% | ~10–15 people |
+| Interest → Trial (3 free analyses) | ~100% of interested | ~10–15 enter trial |
+| Trial → Paid | ~20–30% (estimated) | ~3 conversions |
+| **End-to-end (DM → Paid)** | **~3%** | Pending validation |
 
-**Funnel Model:** Standard SaaS free-trial approach—offer a few searches at no cost to demonstrate value before conversion.
+**Caveat:** These are preliminary estimates. First paying customer was a warm referral, not cold outreach. Stripe only recently integrated—30 days of data needed for validation.
 
-**Summary:** For every 100 recruiters targeted, approximately 10 enter the platform for a free trial. Paid conversion data is pending.
+**Funnel Model:** Standard SaaS free-trial approach—offer 3 free searches to demonstrate value before conversion.
 
----
-
-## Pricing Details & Token System
-
-### Current Model:
-- **Price:** $49 USD per analysis
-- **Alternative:** Token system - 500 tokens = $50
-- **Maximum candidates:** 200 per analysis
-
-### Cost Structure:
-- **Fixed cost per analysis:** $10 (platform, API base)
-- **Variable cost:** $0.05 per candidate analyzed
-- **Raw cost:** ~$20 per analysis (at 200 candidates)
-- **Gross margin:** ~$29 per analysis (~59%)
-
-### Break-Even Analysis:
-- Need to cover: Developer ($4,000/month) + Operations + Infrastructure
-- At $29 margin: ~140 analyses/month to break even on developer alone
-- Current stage: First paying customer acquired 2025-11-28
+**Council Question:** Is 3% end-to-end conversion reasonable for early-stage B2B SaaS?
 
 ---
 
@@ -358,11 +374,21 @@ Example:
 
 ## Code Ownership & IP Risks
 
-### Current Situation:
+### Current Situation: ⚠️ HIGH RISK
 - **No NDA in place** with developer (yet)
 - Developer implemented platform code
 - **Developer HAS access to prompts** - prompts are NOT kept separate
 - CTO owns the know-how, customers, clients; developer is the tech brain
+
+**Developer can currently deploy independently.** He has access to:
+- The code repository
+- Server keys
+- API accounts
+
+**Why we accept this risk:**
+- Non-technical founders with no alternative
+- Six-figure in-house developer not financially viable
+- Proceeding with eyes open; prioritising legal protection upon UK incorporation
 
 ### Developer Relationship & Incentive Plan:
 - Developer knows about the exit strategy goal
@@ -440,6 +466,13 @@ This is recognised as a **binary risk factor** and will be addressed as a priori
 - Complete platform automation end-to-end
 - Establish proper IP/NDA agreements with developer
 
+### Automation Timeline Estimate:
+**Developer's estimate:** Automating the Sales Navigator search strategy generation inside the app will take **minimum 2 weeks of full-time work**.
+
+**Caveat:** Dependent on no competing priorities. If urgent work arises (bug fixes, client-facing features), timeline will slip.
+
+**Council Question:** Should we ring-fence these 2 weeks immediately, or is the €600/month operator bridge sufficient to buy more time?
+
 ### Ultimate Goal:
 1. User calls Alexandra OR provides a document
 2. Alexandra Copilot (AC) interacts with user to gather all necessary information
@@ -474,6 +507,13 @@ This is a priority integration that moves the platform from "grey area" Sales Na
 - 50/50 ownership split = $2.5 million per partner
 - "Life-changing number" that makes both founders happy
 - Both partners fully aligned on this number and timeline
+
+### Exit Flexibility
+**Position:** Not rigidly attached to $5M figure.
+
+If a credible offer of **€3M with a clean exit in 12 months** were presented, it would be seriously considered. A faster, cleaner path may be preferable to maximising the number.
+
+**Implication for Council:** May optimise for maximum profitability and clean financials rather than aggressive growth, if that accelerates the exit timeline.
 
 ### Investment Appetite: 100% Bootstrapped
 - **NOT open to angel investors** or outside funding
@@ -529,25 +569,6 @@ When advising Simple AF Jobs, the council should prioritize in this order:
 
 ---
 
-## Current Constraints & Risks
-
-### Primary Bottleneck: Founder/CTO
-- Founder does manual work that should be automated
-- Founder built all the prompts, QC processes, and assessment logic
-- No qualified staff to take this over currently
-- Time spent on tasks that shouldn't require founder involvement
-
-### Key Business Risk: Single Developer Dependency
-- One developer in India ($1,000 USD/week)
-- No visibility or control over what he does
-- He implemented the platform code
-- **Critical risk: If he leaves, the business could collapse**
-- Founder has the "brains" (prompts, logic), developer has the implementation
-
-**Working On:** Automating manual steps to reduce founder dependency and enable the platform to self-run.
-
----
-
 ## Technology Stack
 
 - **Backend:** Python 3.x
@@ -576,9 +597,15 @@ Tech stack choices are NOT constraints—council can suggest alternatives if ben
 - **Total paying customers:** 1
 - **Additional sales since Nov 28:** No (Nov 28 was Friday, today is Nov 29)
 - **Repeat purchase data:** None yet (too early)
-- **Main objection when people don't buy:** Unknown (insufficient sample size)
 - **First customer acquisition method:** Warm referral from Greg (50% co-owner)—not a cold outreach conversion
 - **Sales target:** Start selling actively in November-December 2025
+
+### Drop-off Reasons (Early Signals)
+- **Primary reason cited:** "No budget"
+- **Secondary factors:** Still gathering data; several meetings scheduled
+- **Caveat:** Very early stage—free trial users still active, no clear patterns yet
+
+**Commitment:** Will report structured feedback to Council after 10+ trial completions.
 
 **Pipeline / Potential Buyers:**
 - **Company buyers (acquirers):** Starting from zero - no list of potential acquirers yet
@@ -616,15 +643,24 @@ When making recommendations for Simple AF Jobs:
 
 *Last Updated: 2025-11-30*
 
-| Area | Current Status | Council Input Needed |
-|------|----------------|---------------------|
-| Automation | 60/40 split — developer actively closing gap | None immediately |
-| Funnel Conversion | 10% to trial; paid conversion TBD | Monitor and revisit in 30 days |
-| Core Signal | Target early Jan 2025 | Confirm priority vs. other dev work |
-| Developer IP | Pending UK incorporation | Expedite as binary risk |
-| Pricing | $49 "WTFN" price | Should we test $99–$149? |
-| ICP | Hard-to-find roles; contingency recruiters | Validate with next 10 customers |
-| Usage Model | 10 searches/month baseline | Confirm unit economics |
-| Exit Multiple | Unknown | Council to advise on realistic range |
-| Acquirer Hypothesis | None yet | Council to help identify targets |
-| Earn-out | Max 12 months acceptable | Factor into positioning |
+| Area | Current Status | Risk | Council Input Needed |
+|------|----------------|------|---------------------|
+| Funnel Conversion | ~3% DM→Paid (estimated) | Unknown | Is 3% reasonable for early-stage B2B SaaS? |
+| Automation Priority | 2 weeks dev time required | Medium | Ring-fence now or use operator bridge? |
+| Developer IP | Can deploy independently; no NDA | **HIGH** | Acknowledged as binary risk |
+| ICP Strategy | Easy vs hard roles unresolved | Low | Focus on volume (easy) or differentiation (hard)? |
+| Pricing | $49 "WTFN"; no pushback yet | Low | A/B test $79–$99 at 20–30 customers? |
+| Exit Flexibility | Open to €3M clean exit | N/A | Optimise for profitability over growth? |
+| LinkedIn Grey Area | Willing to operate 6–9 months | Medium | Acknowledged; Core Signal by Jan 2025 |
+| Exit Multiple | Unknown | Medium | Council to advise on realistic range |
+| Acquirer Hypothesis | Categories identified, no targets | Medium | Which category to prioritise? |
+| Drop-off Reasons | "No budget" cited | Unknown | Gather data from next 10 trials |
+
+### Summary: Risk Levels
+
+| Risk Level | Items |
+|------------|-------|
+| **HIGH** | Developer IP (can deploy independently) |
+| **Medium** | Automation priority, LinkedIn ToS, Exit multiple unknown, Acquirer targeting |
+| **Low** | ICP strategy, Pricing |
+| **Unknown** | Funnel conversion validity, Drop-off patterns |
