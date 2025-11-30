@@ -131,7 +131,7 @@ function App() {
         messages: [...prev.messages, assistantMessage],
       }));
 
-      // Send message with streaming (with business context)
+      // Send message with streaming (with all context selections)
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -211,7 +211,12 @@ function App() {
           default:
             console.log('Unknown event type:', eventType);
         }
-      }, selectedBusiness);
+      }, {
+        businessId: selectedBusiness,
+        departmentId: selectedDepartment !== 'standard' ? selectedDepartment : null,
+        channelId: selectedChannel || null,
+        styleId: selectedStyle || null,
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error

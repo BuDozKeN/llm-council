@@ -85,10 +85,15 @@ export const api = {
    * @param {string} conversationId - The conversation ID
    * @param {string} content - The message content
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
-   * @param {string|null} businessId - Optional business context ID
+   * @param {object} options - Context options
+   * @param {string|null} options.businessId - Optional business context ID
+   * @param {string|null} options.departmentId - Optional department ID (e.g., 'marketing')
+   * @param {string|null} options.channelId - Optional channel ID (e.g., 'linkedin')
+   * @param {string|null} options.styleId - Optional style ID (e.g., 'ann-friedman')
    * @returns {Promise<void>}
    */
-  async sendMessageStream(conversationId, content, onEvent, businessId = null) {
+  async sendMessageStream(conversationId, content, onEvent, options = {}) {
+    const { businessId = null, departmentId = null, channelId = null, styleId = null } = options;
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -96,7 +101,13 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, business_id: businessId }),
+        body: JSON.stringify({
+          content,
+          business_id: businessId,
+          department_id: departmentId,
+          channel_id: channelId,
+          style_id: styleId,
+        }),
       }
     );
 

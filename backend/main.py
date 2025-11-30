@@ -34,6 +34,9 @@ class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
     business_id: Optional[str] = None
+    department_id: Optional[str] = None
+    channel_id: Optional[str] = None
+    style_id: Optional[str] = None
 
 
 class ConversationMetadata(BaseModel):
@@ -156,20 +159,28 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
+            # Build context options dict for all stages
+            context_opts = {
+                'business_id': request.business_id,
+                'department_id': request.department_id,
+                'channel_id': request.channel_id,
+                'style_id': request.style_id,
+            }
+
             # Stage 1: Collect responses
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content, request.business_id)
+            stage1_results = await stage1_collect_responses(request.content, **context_opts)
             yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
             # Stage 2: Collect rankings
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, request.business_id)
+            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, **context_opts)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
             yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
             # Stage 3: Synthesize final answer
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, request.business_id)
+            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, **context_opts)
             yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started

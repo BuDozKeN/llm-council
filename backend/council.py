@@ -8,7 +8,10 @@ from .context_loader import get_system_prompt_with_context
 
 async def stage1_collect_responses(
     user_query: str,
-    business_id: Optional[str] = None
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Stage 1: Collect individual responses from all council models.
@@ -16,15 +19,23 @@ async def stage1_collect_responses(
     Args:
         user_query: The user's question
         business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
 
     Returns:
         List of dicts with 'model' and 'response' keys
     """
-    # Build messages with optional business context
+    # Build messages with optional contexts
     messages = []
 
-    # Add system prompt with business context if specified
-    system_prompt = get_system_prompt_with_context(business_id)
+    # Add system prompt with all contexts if specified
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
@@ -48,7 +59,10 @@ async def stage1_collect_responses(
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
-    business_id: Optional[str] = None
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
@@ -57,6 +71,9 @@ async def stage2_collect_rankings(
         user_query: The original user query
         stage1_results: Results from Stage 1
         business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
 
     Returns:
         Tuple of (rankings list, label_to_model mapping)
@@ -107,10 +124,15 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-    # Build messages with optional business context
+    # Build messages with optional contexts
     messages = []
 
-    system_prompt = get_system_prompt_with_context(business_id)
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
@@ -138,7 +160,10 @@ async def stage3_synthesize_final(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
     stage2_results: List[Dict[str, Any]],
-    business_id: Optional[str] = None
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Stage 3: Chairman synthesizes final response.
@@ -148,6 +173,9 @@ async def stage3_synthesize_final(
         stage1_results: Individual model responses from Stage 1
         stage2_results: Rankings from Stage 2
         business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
 
     Returns:
         Dict with 'model' and 'response' keys
@@ -180,10 +208,15 @@ Your task as Chairman is to synthesize all of this information into a single, co
 
 Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
 
-    # Build messages with optional business context
+    # Build messages with optional contexts
     messages = []
 
-    system_prompt = get_system_prompt_with_context(business_id)
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
 
@@ -326,7 +359,10 @@ Title:"""
 
 async def run_full_council(
     user_query: str,
-    business_id: Optional[str] = None
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
 ) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process.
@@ -334,12 +370,23 @@ async def run_full_council(
     Args:
         user_query: The user's question
         business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
 
     Returns:
         Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
+    # Build context options dict
+    context_opts = {
+        'business_id': business_id,
+        'department_id': department_id,
+        'channel_id': channel_id,
+        'style_id': style_id,
+    }
+
     # Stage 1: Collect individual responses
-    stage1_results = await stage1_collect_responses(user_query, business_id)
+    stage1_results = await stage1_collect_responses(user_query, **context_opts)
 
     # If no models responded successfully, return error
     if not stage1_results:
@@ -350,7 +397,7 @@ async def run_full_council(
 
     # Stage 2: Collect rankings
     stage2_results, label_to_model = await stage2_collect_rankings(
-        user_query, stage1_results, business_id
+        user_query, stage1_results, **context_opts
     )
 
     # Calculate aggregate rankings
@@ -361,7 +408,7 @@ async def run_full_council(
         user_query,
         stage1_results,
         stage2_results,
-        business_id
+        **context_opts
     )
 
     # Prepare metadata

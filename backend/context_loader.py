@@ -1,11 +1,14 @@
-"""Business context loader for multi-tenant AI Council."""
+"""Context loader for multi-tenant AI Council with department, channel, and style support."""
 
 import os
 from pathlib import Path
 from typing import Optional, List, Dict
 
-# Base directory for business contexts (within councils structure)
-CONTEXTS_DIR = Path(__file__).parent.parent / "councils" / "organisations"
+# Base directories for all contexts (within councils structure)
+COUNCILS_DIR = Path(__file__).parent.parent / "councils"
+CONTEXTS_DIR = COUNCILS_DIR / "organisations"
+DEPARTMENTS_DIR = COUNCILS_DIR / "departments"
+STYLES_DIR = COUNCILS_DIR / "styles"
 
 
 def list_available_businesses() -> List[Dict[str, str]]:
@@ -73,37 +76,174 @@ def load_business_context(business_id: str) -> Optional[str]:
         return None
 
 
-def get_system_prompt_with_context(business_id: Optional[str] = None) -> Optional[str]:
+def load_department_persona(department_id: str) -> Optional[str]:
     """
-    Generate a system prompt that includes business context.
+    Load the persona for a specific department.
+
+    Args:
+        department_id: The department ID (e.g., 'marketing', 'sales')
+
+    Returns:
+        The persona content as a string, or None if not found
+    """
+    if not department_id:
+        return None
+
+    # Try to load from personas subfolder first (new structure)
+    dept_dir = DEPARTMENTS_DIR / department_id
+    persona_file = dept_dir / "personas" / "cmo.md"  # Default persona for now
+
+    # Fall back to _base.md if no personas folder
+    if not persona_file.exists():
+        persona_file = dept_dir / "_base.md"
+
+    if not persona_file.exists():
+        return None
+
+    try:
+        with open(persona_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error loading persona for {department_id}: {e}")
+        return None
+
+
+def load_channel_context(department_id: str, channel_id: str) -> Optional[str]:
+    """
+    Load the channel-specific context for a department.
+
+    Args:
+        department_id: The department ID (e.g., 'marketing')
+        channel_id: The channel ID (e.g., 'linkedin', 'x', 'email')
+
+    Returns:
+        The channel context as a string, or None if not found
+    """
+    if not department_id or not channel_id:
+        return None
+
+    channel_file = DEPARTMENTS_DIR / department_id / "channels" / f"{channel_id}.md"
+
+    if not channel_file.exists():
+        return None
+
+    try:
+        with open(channel_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error loading channel {channel_id} for {department_id}: {e}")
+        return None
+
+
+def load_style_context(style_id: str) -> Optional[str]:
+    """
+    Load the style/voice context.
+
+    Args:
+        style_id: The style ID (e.g., 'ann-friedman')
+
+    Returns:
+        The style context as a string, or None if not found
+    """
+    if not style_id:
+        return None
+
+    # Check authors subfolder first
+    style_file = STYLES_DIR / "authors" / f"{style_id}.md"
+
+    # Fall back to tones subfolder
+    if not style_file.exists():
+        style_file = STYLES_DIR / "tones" / f"{style_id}.md"
+
+    if not style_file.exists():
+        return None
+
+    try:
+        with open(style_file, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        print(f"Error loading style {style_id}: {e}")
+        return None
+
+
+def get_system_prompt_with_context(
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> Optional[str]:
+    """
+    Generate a system prompt that includes all selected contexts.
 
     Args:
         business_id: The business to load context for, or None for no context
+        department_id: The department persona to load (e.g., 'marketing')
+        channel_id: The channel context to load (e.g., 'linkedin')
+        style_id: The writing style to load (e.g., 'ann-friedman')
 
     Returns:
-        System prompt string with business context, or None if no context
+        System prompt string with all contexts combined, or None if no context
     """
-    if not business_id:
+    sections = []
+
+    # Load department persona (this becomes the primary identity)
+    persona = load_department_persona(department_id) if department_id else None
+    if persona:
+        sections.append(f"""=== YOUR ROLE & PERSONA ===
+
+{persona}
+
+=== END ROLE & PERSONA ===""")
+
+    # Load channel-specific guidance
+    channel = load_channel_context(department_id, channel_id) if channel_id and department_id else None
+    if channel:
+        sections.append(f"""=== CHANNEL GUIDANCE ===
+
+{channel}
+
+=== END CHANNEL GUIDANCE ===""")
+
+    # Load writing style
+    style = load_style_context(style_id) if style_id else None
+    if style:
+        sections.append(f"""=== WRITING STYLE ===
+
+{style}
+
+=== END WRITING STYLE ===""")
+
+    # Load business context
+    business = load_business_context(business_id) if business_id else None
+    if business:
+        sections.append(f"""=== BUSINESS CONTEXT ===
+
+{business}
+
+=== END BUSINESS CONTEXT ===""")
+
+    # If no contexts at all, return None
+    if not sections:
         return None
 
-    context = load_business_context(business_id)
+    # Build the system prompt
+    intro = "You are an AI advisor participating in an AI Council."
 
-    if not context:
-        return None
+    if persona:
+        # If there's a persona, let it define the identity
+        intro = ""
 
-    system_prompt = f"""You are an AI advisor participating in an AI Council. You are helping make decisions for a specific business. Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
-
-=== BUSINESS CONTEXT ===
-
-{context}
-
-=== END BUSINESS CONTEXT ===
-
+    instructions = """
 When responding:
-1. Consider the business's stated priorities and constraints
-2. Be practical given their current stage and resources
-3. Reference specific aspects of their business when relevant
-4. Avoid generic advice that ignores their context
+1. Stay in character according to your role and persona
+2. Consider the business's stated priorities and constraints
+3. Apply the channel and style guidelines when applicable
+4. Be practical and specific, avoiding generic advice"""
+
+    system_prompt = f"""{intro}
+
+{chr(10).join(sections)}
+{instructions}
 """
 
-    return system_prompt
+    return system_prompt.strip()
