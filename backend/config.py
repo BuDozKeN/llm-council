@@ -14,6 +14,7 @@ COUNCIL_MODELS = [
     "google/gemini-3-pro-preview",
     "anthropic/claude-opus-4.5",
     "x-ai/grok-4",
+    "deepseek/deepseek-chat-v3-0324",
 ]
 
 # Chairman model - synthesizes final response
