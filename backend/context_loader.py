@@ -1,11 +1,11 @@
-"""Business context loader for multi-tenant LLM Council."""
+"""Business context loader for multi-tenant AI Council."""
 
 import os
 from pathlib import Path
 from typing import Optional, List, Dict
 
-# Base directory for business contexts
-CONTEXTS_DIR = Path(__file__).parent.parent / "contexts"
+# Base directory for business contexts (within councils structure)
+CONTEXTS_DIR = Path(__file__).parent.parent / "councils" / "organisations"
 
 
 def list_available_businesses() -> List[Dict[str, str]]:
@@ -91,7 +91,7 @@ def get_system_prompt_with_context(business_id: Optional[str] = None) -> Optiona
     if not context:
         return None
 
-    system_prompt = f"""You are an AI advisor participating in an LLM Council. You are helping make decisions for a specific business. Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
+    system_prompt = f"""You are an AI advisor participating in an AI Council. You are helping make decisions for a specific business. Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
 
 === BUSINESS CONTEXT ===
 

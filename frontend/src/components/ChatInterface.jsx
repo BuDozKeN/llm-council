@@ -12,6 +12,9 @@ export default function ChatInterface({
   businesses = [],
   selectedBusiness,
   onSelectBusiness,
+  departments = [],
+  selectedDepartment,
+  onSelectDepartment,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -44,7 +47,7 @@ export default function ChatInterface({
     return (
       <div className="chat-interface">
         <div className="empty-state">
-          <h2>Welcome to LLM Council</h2>
+          <h2>Welcome to AI Council</h2>
           <p>Create a new conversation to get started</p>
         </div>
       </div>
@@ -57,7 +60,7 @@ export default function ChatInterface({
         {conversation.messages.length === 0 ? (
           <div className="empty-state">
             <h2>Start a conversation</h2>
-            <p>Ask a question to consult the LLM Council</p>
+            <p>Ask a question to consult the AI Council</p>
           </div>
         ) : (
           conversation.messages.map((msg, index) => (
@@ -73,7 +76,7 @@ export default function ChatInterface({
                 </div>
               ) : (
                 <div className="assistant-message">
-                  <div className="message-label">LLM Council</div>
+                  <div className="message-label">AI Council</div>
 
                   {/* Stage 1 */}
                   {msg.loading?.stage1 && (
@@ -125,9 +128,29 @@ export default function ChatInterface({
 
       {conversation.messages.length === 0 && (
         <form className="input-form" onSubmit={handleSubmit}>
+          {/* Department Selector */}
+          <div className="department-selector">
+            <label>Department:</label>
+            <div className="department-pills">
+              {departments.map((dept) => (
+                <button
+                  key={dept.id}
+                  type="button"
+                  className={`department-pill ${selectedDepartment === dept.id ? 'active' : ''}`}
+                  onClick={() => onSelectDepartment(dept.id)}
+                  disabled={isLoading}
+                  title={dept.description}
+                >
+                  {dept.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Company Selector */}
           {businesses.length > 0 && (
             <div className="business-selector">
-              <label htmlFor="business-select">Business Context:</label>
+              <label htmlFor="business-select">Company:</label>
               <select
                 id="business-select"
                 value={selectedBusiness || ''}
