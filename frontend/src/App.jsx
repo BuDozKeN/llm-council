@@ -230,6 +230,7 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        departments={DEPARTMENTS}
       />
       <ChatInterface
         conversation={currentConversation}

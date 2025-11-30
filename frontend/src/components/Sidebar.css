@@ -1,7 +1,7 @@
 .sidebar {
-  width: 260px;
-  background: #f8f8f8;
-  border-right: 1px solid #e0e0e0;
+  width: 280px;
+  background: #fafafa;
+  border-right: 1px solid #e5e5e5;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -9,52 +9,140 @@
 
 .sidebar-header {
   padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
 }
 
 .sidebar-header h1 {
   font-size: 18px;
+  font-weight: 600;
   margin: 0 0 12px 0;
-  color: #333;
+  color: #1a1a1a;
 }
 
 .new-conversation-btn {
   width: 100%;
-  padding: 10px;
+  padding: 10px 16px;
   background: #4a90e2;
-  border: 1px solid #4a90e2;
-  border-radius: 6px;
+  border: none;
+  border-radius: 8px;
   color: #fff;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s;
   font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .new-conversation-btn:hover {
   background: #357abd;
-  border-color: #357abd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
+/* Filter Section */
+.sidebar-filter {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #f8f8f8;
+  font-size: 13px;
+  color: #444;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filter-select:hover {
+  border-color: #4a90e2;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* Conversation List */
 .conversation-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 8px 0;
 }
 
 .no-conversations {
-  padding: 16px;
+  padding: 32px 16px;
   text-align: center;
-  color: #999;
+  color: #888;
   font-size: 14px;
 }
 
-.conversation-item {
-  padding: 12px;
+/* Conversation Groups */
+.conversation-group {
   margin-bottom: 4px;
-  border-radius: 6px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
   cursor: pointer;
-  transition: background 0.2s;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.group-header:hover {
+  background: #f0f0f0;
+}
+
+.chevron {
+  font-size: 14px;
+  color: #888;
+  margin-right: 8px;
+  transition: transform 0.2s ease;
+  display: inline-block;
+  width: 12px;
+}
+
+.chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.group-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-count {
+  font-size: 11px;
+  color: #999;
+  background: #e8e8e8;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* Conversations within groups */
+.group-conversations {
+  padding: 0 8px;
+}
+
+.conversation-item {
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
 }
 
 .conversation-item:hover {
@@ -62,17 +150,63 @@
 }
 
 .conversation-item.active {
-  background: #e8f0fe;
-  border: 1px solid #4a90e2;
+  background: #e8f4fd;
+  border-color: #4a90e2;
 }
 
 .conversation-title {
   color: #333;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 500;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conversation-item.active .conversation-title {
+  color: #1a73e8;
 }
 
 .conversation-meta {
-  color: #999;
+  color: #888;
+  font-size: 11px;
+}
+
+/* Show More Button */
+.show-more-btn {
+  width: 100%;
+  padding: 8px;
+  margin: 4px 0 8px;
+  background: transparent;
+  border: 1px dashed #d0d0d0;
+  border-radius: 6px;
+  color: #666;
   font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.show-more-btn:hover {
+  background: #f5f5f5;
+  border-color: #4a90e2;
+  color: #4a90e2;
+}
+
+/* Scrollbar styling */
+.conversation-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.conversation-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.conversation-list::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 3px;
+}
+
+.conversation-list::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
 }
