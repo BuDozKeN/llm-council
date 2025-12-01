@@ -25,18 +25,37 @@ export default function ChatInterface({
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const userHasScrolledUp = useRef(false);
+
+  // Check if user is near the bottom of the scroll area
+  const isNearBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 100; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+
+  // Handle user scroll - track if they've scrolled up
+  const handleScroll = () => {
+    userHasScrolledUp.current = !isNearBottom();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Only auto-scroll if user hasn't scrolled up
   useEffect(() => {
-    scrollToBottom();
+    if (!userHasScrolledUp.current) {
+      scrollToBottom();
+    }
   }, [conversation]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
+      userHasScrolledUp.current = false; // Reset so new responses auto-scroll
       onSendMessage(input);
       setInput('');
     }
@@ -63,7 +82,7 @@ export default function ChatInterface({
 
   return (
     <div className="chat-interface">
-      <div className="messages-container">
+      <div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
         {conversation.messages.length === 0 ? (
           <div className="empty-state">
             <h2>Start a conversation</h2>
