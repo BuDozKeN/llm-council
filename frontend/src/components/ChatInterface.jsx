@@ -26,6 +26,7 @@ export default function ChatInterface({
   onSelectStyle,
   // Triage props
   triageState,
+  originalQuestion,
   isTriageLoading,
   onTriageRespond,
   onTriageSkip,
@@ -91,12 +92,32 @@ export default function ChatInterface({
   return (
     <div className="chat-interface">
       <div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
-        {conversation.messages.length === 0 ? (
+        {/* Triage - show at top when active */}
+        {triageState === 'analyzing' && (
+          <div className="triage-analyzing">
+            <div className="spinner"></div>
+            <span>Analyzing your question...</span>
+          </div>
+        )}
+
+        {triageState && triageState !== 'analyzing' && (
+          <Triage
+            triageResult={triageState}
+            originalQuestion={originalQuestion}
+            onRespond={onTriageRespond}
+            onSkip={onTriageSkip}
+            onProceed={onTriageProceed}
+            isLoading={isTriageLoading || isLoading}
+          />
+        )}
+
+        {/* Show empty state only when no triage and no messages */}
+        {conversation.messages.length === 0 && !triageState ? (
           <div className="empty-state">
             <h2>Start a conversation</h2>
             <p>Ask a question to consult the AI Council</p>
           </div>
-        ) : (
+        ) : conversation.messages.length > 0 ? (
           conversation.messages.map((msg, index) => (
             <div key={index} className="message-group">
               {msg.role === 'user' ? (
@@ -144,7 +165,7 @@ export default function ChatInterface({
               )}
             </div>
           ))
-        )}
+        ) : null}
 
         {isLoading && (
           <div className="loading-indicator">
@@ -156,25 +177,6 @@ export default function ChatInterface({
             >
               Stop
             </button>
-          </div>
-        )}
-
-        {/* Triage - show when analyzing or has results */}
-        {triageState && triageState !== 'analyzing' && (
-          <Triage
-            triageResult={triageState}
-            onRespond={onTriageRespond}
-            onSkip={onTriageSkip}
-            onProceed={onTriageProceed}
-            isLoading={isTriageLoading || isLoading}
-          />
-        )}
-
-        {/* Triage analyzing state */}
-        {triageState === 'analyzing' && (
-          <div className="triage-analyzing">
-            <div className="spinner"></div>
-            <span>Analyzing your question...</span>
           </div>
         )}
 

@@ -564,6 +564,7 @@ function App() {
         onSelectStyle={setSelectedStyle}
         // Triage props
         triageState={triageState}
+        originalQuestion={originalQuery}
         isTriageLoading={isTriageLoading}
         onTriageRespond={handleTriageRespond}
         onTriageSkip={handleTriageSkip}
