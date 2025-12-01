@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import Leaderboard from './components/Leaderboard';
 import { api } from './api';
 import './App.css';
 
@@ -37,6 +38,7 @@ function App() {
   const [selectedDepartment, setSelectedDepartment] = useState('standard');
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   const abortControllerRef = useRef(null);
 
   // Load conversations and businesses on mount
@@ -436,6 +438,7 @@ function App() {
         }
       }, {
         businessId: selectedBusiness,
+        department: selectedDepartment,
         signal: abortControllerRef.current?.signal,
       });
     } catch (error) {
@@ -464,6 +467,7 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
         departments={DEPARTMENTS}
       />
       <ChatInterface
@@ -489,6 +493,10 @@ function App() {
         styles={STYLES}
         selectedStyle={selectedStyle}
         onSelectStyle={setSelectedStyle}
+      />
+      <Leaderboard
+        isOpen={isLeaderboardOpen}
+        onClose={() => setIsLeaderboardOpen(false)}
       />
     </div>
   );

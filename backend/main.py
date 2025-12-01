@@ -12,6 +12,7 @@ import asyncio
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings
 from .context_loader import list_available_businesses
+from . import leaderboard
 
 app = FastAPI(title="LLM Council API")
 
@@ -34,6 +35,7 @@ class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
     business_id: Optional[str] = None
+    department: Optional[str] = "standard"
 
 
 class ConversationMetadata(BaseModel):
@@ -218,6 +220,15 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 stage3_result
             )
 
+            # Record rankings to leaderboard
+            if aggregate_rankings:
+                leaderboard.record_session_rankings(
+                    conversation_id=conversation_id,
+                    department=request.department or "standard",
+                    business_id=request.business_id,
+                    aggregate_rankings=aggregate_rankings
+                )
+
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
 
@@ -233,6 +244,25 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             "Connection": "keep-alive",
         }
     )
+
+
+# Leaderboard endpoints
+@app.get("/api/leaderboard")
+async def get_leaderboard_summary():
+    """Get full leaderboard summary with overall and per-department rankings."""
+    return leaderboard.get_leaderboard_summary()
+
+
+@app.get("/api/leaderboard/overall")
+async def get_overall_leaderboard():
+    """Get overall model leaderboard across all sessions."""
+    return leaderboard.get_overall_leaderboard()
+
+
+@app.get("/api/leaderboard/department/{department}")
+async def get_department_leaderboard(department: str):
+    """Get leaderboard for a specific department."""
+    return leaderboard.get_department_leaderboard(department)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ export default function Sidebar({
   currentConversationId,
   onSelectConversation,
   onNewConversation,
+  onOpenLeaderboard,
   departments = [],
 }) {
   const [filter, setFilter] = useState('all');
@@ -79,9 +80,14 @@ export default function Sidebar({
     <div className="sidebar">
       <div className="sidebar-header">
         <h1>AI Council</h1>
-        <button className="new-conversation-btn" onClick={onNewConversation}>
-          + New Conversation
-        </button>
+        <div className="sidebar-header-buttons">
+          <button className="leaderboard-btn" onClick={onOpenLeaderboard} title="View Model Leaderboard">
+            🏆
+          </button>
+          <button className="new-conversation-btn" onClick={onNewConversation}>
+            + New
+          </button>
+        </div>
       </div>
 
       {/* Filter Dropdown */}

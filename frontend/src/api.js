@@ -87,11 +87,12 @@ export const api = {
    * @param {function} onEvent - Callback function for each event: (eventType, data) => void
    * @param {object} options - Context options
    * @param {string|null} options.businessId - Optional business context ID
+   * @param {string|null} options.department - Optional department for leaderboard tracking
    * @param {AbortSignal} options.signal - Optional AbortSignal for cancellation
    * @returns {Promise<void>}
    */
   async sendMessageStream(conversationId, content, onEvent, options = {}) {
-    const { businessId = null, signal = null } = options;
+    const { businessId = null, department = 'standard', signal = null } = options;
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -99,7 +100,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, business_id: businessId }),
+        body: JSON.stringify({ content, business_id: businessId, department }),
         signal, // Allow cancellation
       }
     );
@@ -146,5 +147,39 @@ export const api = {
         throw e;
       }
     }
+  },
+
+  /**
+   * Get leaderboard summary (overall + all departments).
+   */
+  async getLeaderboardSummary() {
+    const response = await fetch(`${API_BASE}/api/leaderboard`);
+    if (!response.ok) {
+      throw new Error('Failed to get leaderboard');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get overall leaderboard.
+   */
+  async getOverallLeaderboard() {
+    const response = await fetch(`${API_BASE}/api/leaderboard/overall`);
+    if (!response.ok) {
+      throw new Error('Failed to get overall leaderboard');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get department-specific leaderboard.
+   * @param {string} department - The department name
+   */
+  async getDepartmentLeaderboard(department) {
+    const response = await fetch(`${API_BASE}/api/leaderboard/department/${department}`);
+    if (!response.ok) {
+      throw new Error('Failed to get department leaderboard');
+    }
+    return response.json();
   },
 };
