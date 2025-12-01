@@ -164,103 +164,133 @@ function App() {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage1 = true;
-              lastMsg.stage1Streaming = {}; // Reset streaming state
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage1: true }, stage1Streaming: {} }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage1_token':
-            // Append token to the specific model's streaming text
+            // Append token to the specific model's streaming text (IMMUTABLE)
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
               const model = event.model;
-              if (!lastMsg.stage1Streaming[model]) {
-                lastMsg.stage1Streaming[model] = { text: '', complete: false };
-              }
-              lastMsg.stage1Streaming[model].text += event.content;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage1Streaming?.[model] || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage1Streaming: {
+                    ...msg.stage1Streaming,
+                    [model]: {
+                      ...currentStreaming,
+                      text: currentStreaming.text + event.content,
+                    },
+                  },
+                };
+              });
               return { ...prev, messages };
             });
             break;
 
           case 'stage1_model_complete':
-            // Mark a single model as complete
+            // Mark a single model as complete (IMMUTABLE)
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
               const model = event.model;
-              if (!lastMsg.stage1Streaming[model]) {
-                lastMsg.stage1Streaming[model] = { text: event.response, complete: true };
-              } else {
-                lastMsg.stage1Streaming[model].complete = true;
-              }
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage1Streaming?.[model];
+                return {
+                  ...msg,
+                  stage1Streaming: {
+                    ...msg.stage1Streaming,
+                    [model]: currentStreaming
+                      ? { ...currentStreaming, complete: true }
+                      : { text: event.response, complete: true },
+                  },
+                };
+              });
               return { ...prev, messages };
             });
             break;
 
           case 'stage1_model_error':
-            // Handle model error
+            // Handle model error (IMMUTABLE)
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
               const model = event.model;
-              lastMsg.stage1Streaming[model] = {
-                text: `Error: ${event.error}`,
-                complete: true,
-                error: true
-              };
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage1Streaming: {
+                        ...msg.stage1Streaming,
+                        [model]: { text: `Error: ${event.error}`, complete: true, error: true },
+                      },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage1_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage1 = event.data;
-              lastMsg.loading.stage1 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, stage1: event.data, loading: { ...msg.loading, stage1: false } }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage2_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage2 = true;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage2: true } }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage2_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage2 = event.data;
-              lastMsg.metadata = event.metadata;
-              lastMsg.loading.stage2 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage2: event.data,
+                      metadata: event.metadata,
+                      loading: { ...msg.loading, stage2: false },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage3_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage3 = true;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage3: true } }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage3_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage3 = event.data;
-              lastMsg.loading.stage3 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, stage3: event.data, loading: { ...msg.loading, stage3: false } }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
