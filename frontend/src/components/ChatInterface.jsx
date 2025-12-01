@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
+import Triage from './Triage';
 import './ChatInterface.css';
 
 export default function ChatInterface({
@@ -23,6 +24,12 @@ export default function ChatInterface({
   styles = [],
   selectedStyle,
   onSelectStyle,
+  // Triage props
+  triageState,
+  isTriageLoading,
+  onTriageRespond,
+  onTriageSkip,
+  onTriageProceed,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
@@ -152,10 +159,30 @@ export default function ChatInterface({
           </div>
         )}
 
+        {/* Triage - show when analyzing or has results */}
+        {triageState && triageState !== 'analyzing' && (
+          <Triage
+            triageResult={triageState}
+            onRespond={onTriageRespond}
+            onSkip={onTriageSkip}
+            onProceed={onTriageProceed}
+            isLoading={isTriageLoading || isLoading}
+          />
+        )}
+
+        {/* Triage analyzing state */}
+        {triageState === 'analyzing' && (
+          <div className="triage-analyzing">
+            <div className="spinner"></div>
+            <span>Analyzing your question...</span>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
+      {/* Only show input form when no triage is active */}
+      {conversation.messages.length === 0 && !triageState && (
         <form className="input-form" onSubmit={handleSubmit}>
           {/* Row 1: Department & Company */}
           <div className="selector-row">

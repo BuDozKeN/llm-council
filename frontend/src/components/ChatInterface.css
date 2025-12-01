@@ -246,3 +246,19 @@
   background: #c0392b;
   border-color: #c0392b;
 }
+
+/* Triage analyzing state */
+.triage-analyzing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  margin: 16px;
+  background: linear-gradient(135deg, #fff9f0 0%, #fff 100%);
+  border: 2px solid #ff9800;
+  border-radius: 12px;
+  color: #e65100;
+  font-size: 14px;
+  font-weight: 500;
+}

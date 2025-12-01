@@ -11,8 +11,9 @@ import asyncio
 
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings
-from .context_loader import list_available_businesses
+from .context_loader import list_available_businesses, load_business_context
 from . import leaderboard
+from . import triage
 
 app = FastAPI(title="LLM Council API")
 
@@ -244,6 +245,59 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             "Connection": "keep-alive",
         }
     )
+
+
+# Triage endpoints
+class TriageRequest(BaseModel):
+    """Request for triage analysis."""
+    content: str
+    business_id: Optional[str] = None
+
+
+class TriageContinueRequest(BaseModel):
+    """Request to continue triage with additional info."""
+    original_query: str
+    previous_constraints: Dict[str, Any]
+    user_response: str
+    business_id: Optional[str] = None
+
+
+@app.post("/api/triage/analyze")
+async def analyze_triage(request: TriageRequest):
+    """
+    Analyze a user's question for the 4 required constraints.
+    Returns whether ready to proceed or what questions to ask.
+    """
+    # Load business context if specified
+    business_context = None
+    if request.business_id:
+        business_context = load_business_context(request.business_id)
+
+    result = await triage.analyze_for_triage(
+        request.content,
+        business_context=business_context
+    )
+
+    return result
+
+
+@app.post("/api/triage/continue")
+async def continue_triage_conversation(request: TriageContinueRequest):
+    """
+    Continue triage conversation with user's additional information.
+    """
+    business_context = None
+    if request.business_id:
+        business_context = load_business_context(request.business_id)
+
+    result = await triage.continue_triage(
+        original_query=request.original_query,
+        previous_constraints=request.previous_constraints,
+        user_response=request.user_response,
+        business_context=business_context
+    )
+
+    return result
 
 
 # Leaderboard endpoints

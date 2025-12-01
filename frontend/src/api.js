@@ -182,4 +182,51 @@ export const api = {
     }
     return response.json();
   },
+
+  /**
+   * Analyze a question for triage (check for 4 constraints).
+   * @param {string} content - The user's question
+   * @param {string|null} businessId - Optional business context ID
+   * @returns {Promise<{ready: boolean, constraints: object, missing: string[], questions: string|null, enhanced_query: string}>}
+   */
+  async analyzeTriage(content, businessId = null) {
+    const response = await fetch(`${API_BASE}/api/triage/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ content, business_id: businessId }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to analyze triage');
+    }
+    return response.json();
+  },
+
+  /**
+   * Continue triage conversation with additional user info.
+   * @param {string} originalQuery - The original question
+   * @param {object} previousConstraints - Previously extracted constraints
+   * @param {string} userResponse - User's response to triage questions
+   * @param {string|null} businessId - Optional business context ID
+   * @returns {Promise<{ready: boolean, constraints: object, missing: string[], questions: string|null, enhanced_query: string}>}
+   */
+  async continueTriage(originalQuery, previousConstraints, userResponse, businessId = null) {
+    const response = await fetch(`${API_BASE}/api/triage/continue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        original_query: originalQuery,
+        previous_constraints: previousConstraints,
+        user_response: userResponse,
+        business_id: businessId,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to continue triage');
+    }
+    return response.json();
+  },
 };

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import Leaderboard from './components/Leaderboard';
+import Triage from './components/Triage';
 import { api } from './api';
 import './App.css';
 
@@ -39,6 +40,10 @@ function App() {
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  // Triage state
+  const [triageState, setTriageState] = useState(null); // null, 'analyzing', or triage result object
+  const [originalQuery, setOriginalQuery] = useState('');
+  const [isTriageLoading, setIsTriageLoading] = useState(false);
   const abortControllerRef = useRef(null);
 
   // Load conversations and businesses on mount
@@ -102,6 +107,58 @@ function App() {
     setCurrentConversationId(id);
   };
 
+  // Triage handlers
+  const handleStartTriage = async (content) => {
+    if (!currentConversationId) return;
+
+    setOriginalQuery(content);
+    setIsTriageLoading(true);
+    setTriageState('analyzing');
+
+    try {
+      const result = await api.analyzeTriage(content, selectedBusiness);
+      setTriageState(result);
+    } catch (error) {
+      console.error('Triage analysis failed:', error);
+      // On error, skip triage and go directly to council
+      handleSendToCouncil(content);
+    } finally {
+      setIsTriageLoading(false);
+    }
+  };
+
+  const handleTriageRespond = async (response) => {
+    if (!triageState || triageState === 'analyzing') return;
+
+    setIsTriageLoading(true);
+
+    try {
+      const result = await api.continueTriage(
+        originalQuery,
+        triageState.constraints || {},
+        response,
+        selectedBusiness
+      );
+      setTriageState(result);
+    } catch (error) {
+      console.error('Triage continue failed:', error);
+      // On error, proceed with what we have
+      handleSendToCouncil(triageState.enhanced_query || originalQuery);
+    } finally {
+      setIsTriageLoading(false);
+    }
+  };
+
+  const handleTriageSkip = () => {
+    // Skip triage and send original query to council
+    handleSendToCouncil(originalQuery);
+  };
+
+  const handleTriageProceed = (enhancedQuery) => {
+    // Proceed with the enhanced query
+    handleSendToCouncil(enhancedQuery);
+  };
+
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -125,8 +182,20 @@ function App() {
     }
   };
 
+  // This is called when user submits a message - starts triage first
   const handleSendMessage = async (content) => {
     if (!currentConversationId) return;
+    // Start triage analysis
+    await handleStartTriage(content);
+  };
+
+  // This is called after triage is complete (or skipped) to send to council
+  const handleSendToCouncil = async (content) => {
+    if (!currentConversationId) return;
+
+    // Clear triage state
+    setTriageState(null);
+    setOriginalQuery('');
 
     // Create new AbortController for this request
     abortControllerRef.current = new AbortController();
@@ -493,6 +562,12 @@ function App() {
         styles={STYLES}
         selectedStyle={selectedStyle}
         onSelectStyle={setSelectedStyle}
+        // Triage props
+        triageState={triageState}
+        isTriageLoading={isTriageLoading}
+        onTriageRespond={handleTriageRespond}
+        onTriageSkip={handleTriageSkip}
+        onTriageProceed={handleTriageProceed}
       />
       <Leaderboard
         isOpen={isLeaderboardOpen}
