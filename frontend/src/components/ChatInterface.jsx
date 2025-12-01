@@ -94,29 +94,25 @@ export default function ChatInterface({
                     />
                   )}
 
-                  {/* Stage 2 */}
-                  {msg.loading?.stage2 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
-                    </div>
-                  )}
-                  {msg.stage2 && (
+                  {/* Stage 2 - show with streaming or final rankings */}
+                  {(msg.loading?.stage2 || msg.stage2 || (msg.stage2Streaming && Object.keys(msg.stage2Streaming).length > 0)) && (
                     <Stage2
                       rankings={msg.stage2}
+                      streaming={msg.stage2Streaming}
                       labelToModel={msg.metadata?.label_to_model}
                       aggregateRankings={msg.metadata?.aggregate_rankings}
+                      isLoading={msg.loading?.stage2}
                     />
                   )}
 
-                  {/* Stage 3 */}
-                  {msg.loading?.stage3 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 3: Final synthesis...</span>
-                    </div>
+                  {/* Stage 3 - show with streaming or final response */}
+                  {(msg.loading?.stage3 || msg.stage3 || msg.stage3Streaming) && (
+                    <Stage3
+                      finalResponse={msg.stage3}
+                      streaming={msg.stage3Streaming}
+                      isLoading={msg.loading?.stage3}
+                    />
                   )}
-                  {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
                 </div>
               )}
             </div>

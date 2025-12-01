@@ -146,6 +146,221 @@ async def stage1_stream_responses(
     yield {"type": "stage1_all_complete", "data": final_results}
 
 
+async def stage2_stream_rankings(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]],
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 2 with streaming: Each model ranks the anonymized responses,
+    yielding token updates as they arrive.
+
+    Yields:
+        Dicts with event type and data
+    """
+    # Create anonymized labels for responses (Response A, Response B, etc.)
+    labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
+
+    # Create mapping from label to model name
+    label_to_model = {
+        f"Response {label}": result['model']
+        for label, result in zip(labels, stage1_results)
+    }
+
+    # Build the ranking prompt
+    responses_text = "\n\n".join([
+        f"Response {label}:\n{result['response']}"
+        for label, result in zip(labels, stage1_results)
+    ])
+
+    ranking_prompt = f"""You are evaluating different responses to the following question:
+
+Question: {user_query}
+
+Here are the responses from different models (anonymized):
+
+{responses_text}
+
+Your task:
+1. First, evaluate each response individually. For each response, explain what it does well and what it does poorly.
+2. Then, at the very end of your response, provide a final ranking.
+
+IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
+- Start with the line "FINAL RANKING:" (all caps, with colon)
+- Then list the responses from best to worst as a numbered list
+- Each line should be: number, period, space, then ONLY the response label (e.g., "1. Response A")
+- Do not add any other text or explanations in the ranking section
+
+Example of the correct format for your ENTIRE response:
+
+Response A provides good detail on X but misses Y...
+Response B is accurate but lacks depth on Z...
+Response C offers the most comprehensive answer...
+
+FINAL RANKING:
+1. Response C
+2. Response A
+3. Response B
+
+Now provide your evaluation and ranking:"""
+
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": ranking_prompt})
+
+    # Use a queue to collect events from all models
+    queue: asyncio.Queue = asyncio.Queue()
+    model_content: Dict[str, str] = {}
+
+    async def stream_single_model(model: str):
+        """Stream tokens from a single model and put events on the queue."""
+        content = ""
+        try:
+            async for chunk in query_model_stream(model, messages):
+                content += chunk
+                await queue.put({"type": "stage2_token", "model": model, "content": chunk})
+            model_content[model] = content
+            await queue.put({"type": "stage2_model_complete", "model": model, "ranking": content})
+        except Exception as e:
+            print(f"Error streaming stage2 from {model}: {e}")
+            await queue.put({"type": "stage2_model_error", "model": model, "error": str(e)})
+
+    # Start all model streams concurrently
+    tasks = [asyncio.create_task(stream_single_model(model)) for model in COUNCIL_MODELS]
+
+    # Track how many models have completed
+    completed_count = 0
+    total_models = len(COUNCIL_MODELS)
+
+    # Yield events as they arrive
+    while completed_count < total_models:
+        try:
+            event = await asyncio.wait_for(queue.get(), timeout=0.1)
+            yield event
+
+            if event['type'] in ('stage2_model_complete', 'stage2_model_error'):
+                completed_count += 1
+        except asyncio.TimeoutError:
+            if all(task.done() for task in tasks):
+                while not queue.empty():
+                    event = await queue.get()
+                    yield event
+                    if event['type'] in ('stage2_model_complete', 'stage2_model_error'):
+                        completed_count += 1
+                break
+
+    # Build final results with parsed rankings
+    stage2_results = []
+    for model, content in model_content.items():
+        if content:
+            parsed = parse_ranking_from_text(content)
+            stage2_results.append({
+                "model": model,
+                "ranking": content,
+                "parsed_ranking": parsed
+            })
+
+    # Calculate aggregate rankings
+    aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+
+    yield {
+        "type": "stage2_all_complete",
+        "data": stage2_results,
+        "label_to_model": label_to_model,
+        "aggregate_rankings": aggregate_rankings
+    }
+
+
+async def stage3_stream_synthesis(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]],
+    stage2_results: List[Dict[str, Any]],
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 3 with streaming: Chairman synthesizes final response,
+    yielding tokens as they arrive.
+
+    Yields:
+        Dicts with event type and data
+    """
+    # Build comprehensive context for chairman
+    stage1_text = "\n\n".join([
+        f"Model: {result['model']}\nResponse: {result['response']}"
+        for result in stage1_results
+    ])
+
+    stage2_text = "\n\n".join([
+        f"Model: {result['model']}\nRanking: {result['ranking']}"
+        for result in stage2_results
+    ])
+
+    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+
+Original Question: {user_query}
+
+STAGE 1 - Individual Responses:
+{stage1_text}
+
+STAGE 2 - Peer Rankings:
+{stage2_text}
+
+Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer to the user's original question. Consider:
+- The individual responses and their insights
+- The peer rankings and what they reveal about response quality
+- Any patterns of agreement or disagreement
+
+Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
+
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": chairman_prompt})
+
+    # Stream from the chairman model
+    content = ""
+    try:
+        async for chunk in query_model_stream(CHAIRMAN_MODEL, messages):
+            content += chunk
+            yield {"type": "stage3_token", "model": CHAIRMAN_MODEL, "content": chunk}
+    except Exception as e:
+        print(f"Error streaming stage3 from chairman: {e}")
+        yield {"type": "stage3_error", "model": CHAIRMAN_MODEL, "error": str(e)}
+
+    yield {
+        "type": "stage3_complete",
+        "data": {
+            "model": CHAIRMAN_MODEL,
+            "response": content
+        }
+    }
+
+
 async def stage2_collect_rankings(
     user_query: str,
     stage1_results: List[Dict[str, Any]],

@@ -10,7 +10,7 @@ import json
 import asyncio
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
+from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings
 from .context_loader import list_available_businesses
 
 app = FastAPI(title="LLM Council API")
@@ -185,16 +185,35 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                     stage1_results = event['data']
                     yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
-            # Stage 2: Collect rankings
+            # Stage 2: Collect rankings with streaming
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, **context_opts)
-            aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+            stage2_results = []
+            label_to_model = {}
+            aggregate_rankings = []
+            async for event in stage2_stream_rankings(request.content, stage1_results, **context_opts):
+                if event['type'] == 'stage2_token':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_model_complete':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_model_error':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_all_complete':
+                    stage2_results = event['data']
+                    label_to_model = event['label_to_model']
+                    aggregate_rankings = event['aggregate_rankings']
+                    yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
-            # Stage 3: Synthesize final answer
+            # Stage 3: Synthesize final answer with streaming
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, **context_opts)
-            yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+            stage3_result = {}
+            async for event in stage3_stream_synthesis(request.content, stage1_results, stage2_results, **context_opts):
+                if event['type'] == 'stage3_token':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage3_error':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage3_complete':
+                    stage3_result = event['data']
+                    yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started
             if title_task:

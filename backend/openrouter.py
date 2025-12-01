@@ -30,6 +30,7 @@ async def query_model(
     payload = {
         "model": model,
         "messages": messages,
+        "max_tokens": 4096,  # Explicit limit to prevent truncation (especially for DeepSeek)
     }
 
     try:
@@ -79,6 +80,7 @@ async def query_model_stream(
         "model": model,
         "messages": messages,
         "stream": True,
+        "max_tokens": 4096,  # Explicit limit to prevent truncation (especially for DeepSeek)
     }
 
     try:
