@@ -92,58 +92,50 @@ async def stage1_stream_responses(
 
     messages.append({"role": "user", "content": user_query})
 
-    # Track accumulated content for each model
-    model_content: Dict[str, str] = {model: "" for model in COUNCIL_MODELS}
-    model_complete: Dict[str, bool] = {model: False for model in COUNCIL_MODELS}
+    # Use a queue to collect events from all models
+    queue: asyncio.Queue = asyncio.Queue()
+    model_content: Dict[str, str] = {}
 
     async def stream_single_model(model: str):
-        """Stream tokens from a single model and yield updates."""
+        """Stream tokens from a single model and put events on the queue."""
+        content = ""
         try:
             async for chunk in query_model_stream(model, messages):
-                model_content[model] += chunk
-                yield {"type": "stage1_token", "model": model, "content": chunk}
-            model_complete[model] = True
-            yield {"type": "stage1_model_complete", "model": model, "response": model_content[model]}
+                content += chunk
+                await queue.put({"type": "stage1_token", "model": model, "content": chunk})
+            model_content[model] = content
+            await queue.put({"type": "stage1_model_complete", "model": model, "response": content})
         except Exception as e:
             print(f"Error streaming from {model}: {e}")
-            model_complete[model] = True
-            yield {"type": "stage1_model_error", "model": model, "error": str(e)}
+            await queue.put({"type": "stage1_model_error", "model": model, "error": str(e)})
 
-    # Create async generators for all models
-    generators = [stream_single_model(model) for model in COUNCIL_MODELS]
+    # Start all model streams concurrently
+    tasks = [asyncio.create_task(stream_single_model(model)) for model in COUNCIL_MODELS]
 
-    # Merge all streams using asyncio
-    async def merge_streams():
-        """Merge multiple async generators into one."""
-        pending = set()
-        gen_map = {}
+    # Track how many models have completed
+    completed_count = 0
+    total_models = len(COUNCIL_MODELS)
 
-        for i, gen in enumerate(generators):
-            task = asyncio.create_task(gen.__anext__())
-            pending.add(task)
-            gen_map[task] = (i, gen)
+    # Yield events as they arrive
+    while completed_count < total_models:
+        try:
+            # Wait for next event with timeout to check if tasks are done
+            event = await asyncio.wait_for(queue.get(), timeout=0.1)
+            yield event
 
-        while pending:
-            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-
-            for task in done:
-                idx, gen = gen_map.pop(task)
-                try:
-                    result = task.result()
-                    yield result
-
-                    # Schedule next iteration
-                    next_task = asyncio.create_task(gen.__anext__())
-                    pending.add(next_task)
-                    gen_map[next_task] = (idx, gen)
-                except StopAsyncIteration:
-                    # This generator is done
-                    pass
-                except Exception as e:
-                    print(f"Error in stream merge: {e}")
-
-    async for event in merge_streams():
-        yield event
+            # Count completions
+            if event['type'] in ('stage1_model_complete', 'stage1_model_error'):
+                completed_count += 1
+        except asyncio.TimeoutError:
+            # Check if all tasks are done
+            if all(task.done() for task in tasks):
+                # Drain any remaining events
+                while not queue.empty():
+                    event = await queue.get()
+                    yield event
+                    if event['type'] in ('stage1_model_complete', 'stage1_model_error'):
+                        completed_count += 1
+                break
 
     # Yield final complete event with all results
     final_results = [

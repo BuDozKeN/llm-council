@@ -15,7 +15,9 @@ export default function Stage1({ responses, streaming, isLoading }) {
         model,
         response: data.text,
         isStreaming: !data.complete,
+        isComplete: data.complete && !data.error,
         hasError: data.error,
+        isEmpty: data.complete && !data.text && !data.error,
       });
     });
   } else if (responses && responses.length > 0) {
@@ -25,7 +27,9 @@ export default function Stage1({ responses, streaming, isLoading }) {
         model: resp.model,
         response: resp.response,
         isStreaming: false,
+        isComplete: true,
         hasError: false,
+        isEmpty: !resp.response,
       });
     });
   }
@@ -64,12 +68,13 @@ export default function Stage1({ responses, streaming, isLoading }) {
         {displayData.map((data, index) => (
           <button
             key={data.model}
-            className={`tab ${activeTab === index ? 'active' : ''} ${data.isStreaming ? 'streaming' : ''} ${data.hasError ? 'error' : ''}`}
+            className={`tab ${activeTab === index ? 'active' : ''} ${data.isStreaming ? 'streaming' : ''} ${data.hasError || data.isEmpty ? 'error' : ''} ${data.isComplete && !data.isEmpty ? 'complete' : ''}`}
             onClick={() => setActiveTab(index)}
           >
-            {data.isStreaming && <span className="streaming-dot"></span>}
+            {data.isStreaming && <span className="status-icon streaming-dot" title="Generating..."></span>}
+            {data.isComplete && !data.isEmpty && <span className="status-icon complete-icon" title="Complete">✓</span>}
+            {(data.hasError || data.isEmpty) && <span className="status-icon error-icon" title={data.hasError ? 'Error' : 'No response'}>⚠</span>}
             {data.model.split('/')[1] || data.model}
-            {data.hasError && <span className="error-indicator">!</span>}
           </button>
         ))}
       </div>
@@ -78,10 +83,21 @@ export default function Stage1({ responses, streaming, isLoading }) {
         <div className="model-name">
           {activeData.model}
           {activeData.isStreaming && <span className="typing-indicator">●</span>}
+          {activeData.isComplete && !activeData.isEmpty && <span className="complete-badge">Complete</span>}
+          {activeData.isEmpty && <span className="error-badge">No Response</span>}
+          {activeData.hasError && <span className="error-badge">Error</span>}
         </div>
-        <div className={`response-text markdown-content ${activeData.hasError ? 'error-text' : ''}`}>
-          <ReactMarkdown>{activeData.response || ''}</ReactMarkdown>
-          {activeData.isStreaming && <span className="cursor">▊</span>}
+        <div className={`response-text markdown-content ${activeData.hasError || activeData.isEmpty ? 'error-text' : ''}`}>
+          {activeData.isEmpty ? (
+            <p className="empty-message">This model did not return a response.</p>
+          ) : activeData.hasError ? (
+            <p className="empty-message">{activeData.response || 'An error occurred while generating the response.'}</p>
+          ) : (
+            <>
+              <ReactMarkdown>{activeData.response || ''}</ReactMarkdown>
+              {activeData.isStreaming && <span className="cursor">▊</span>}
+            </>
+          )}
         </div>
       </div>
     </div>
