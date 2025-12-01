@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './Stage2.css';
 
 function deAnonymizeText(text, labelToModel) {
@@ -114,7 +115,7 @@ export default function Stage2({ rankings, streaming, labelToModel, aggregateRan
             <p className="empty-message">{activeData.ranking || 'An error occurred while generating the evaluation.'}</p>
           ) : (
             <>
-              <ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {deAnonymizeText(activeData.ranking || '', labelToModel)}
               </ReactMarkdown>
               {activeData.isStreaming && <span className="cursor">▊</span>}

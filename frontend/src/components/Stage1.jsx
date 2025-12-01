@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './Stage1.css';
 
 export default function Stage1({ responses, streaming, isLoading }) {
@@ -94,7 +95,7 @@ export default function Stage1({ responses, streaming, isLoading }) {
             <p className="empty-message">{activeData.response || 'An error occurred while generating the response.'}</p>
           ) : (
             <>
-              <ReactMarkdown>{activeData.response || ''}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeData.response || ''}</ReactMarkdown>
               {activeData.isStreaming && <span className="cursor">▊</span>}
             </>
           )}

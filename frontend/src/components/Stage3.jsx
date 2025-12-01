@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './Stage3.css';
 
 export default function Stage3({ finalResponse, streaming, isLoading }) {
@@ -40,7 +41,7 @@ export default function Stage3({ finalResponse, streaming, isLoading }) {
             <p className="empty-message">{displayText || 'An error occurred while generating the synthesis.'}</p>
           ) : (
             <>
-              <ReactMarkdown>{displayText}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayText}</ReactMarkdown>
               {isStreaming && <span className="cursor">▊</span>}
             </>
           )}

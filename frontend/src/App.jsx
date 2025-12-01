@@ -383,7 +383,14 @@ function App() {
             setCurrentConversation((prev) => {
               const messages = prev.messages.map((msg, idx) =>
                 idx === prev.messages.length - 1
-                  ? { ...msg, stage3: event.data, loading: { ...msg.loading, stage3: false } }
+                  ? {
+                      ...msg,
+                      stage3: event.data,
+                      stage3Streaming: msg.stage3Streaming
+                        ? { ...msg.stage3Streaming, complete: true }
+                        : { text: event.data.response, complete: true },
+                      loading: { ...msg.loading, stage3: false },
+                    }
                   : msg
               );
               return { ...prev, messages };
