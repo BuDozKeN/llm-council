@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './Stage2.css';
 
@@ -14,12 +14,65 @@ function deAnonymizeText(text, labelToModel) {
   return result;
 }
 
-export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
+export default function Stage2({ rankings, streaming, labelToModel, aggregateRankings, isLoading }) {
   const [activeTab, setActiveTab] = useState(0);
 
-  if (!rankings || rankings.length === 0) {
+  // Build display data from either streaming or final rankings
+  const displayData = [];
+
+  if (streaming && Object.keys(streaming).length > 0) {
+    // Use streaming data
+    Object.entries(streaming).forEach(([model, data]) => {
+      displayData.push({
+        model,
+        ranking: data.text,
+        isStreaming: !data.complete,
+        isComplete: data.complete && !data.error,
+        hasError: data.error,
+        isEmpty: data.complete && !data.text && !data.error,
+        parsed_ranking: null, // Can't parse until complete
+      });
+    });
+  } else if (rankings && rankings.length > 0) {
+    // Use final rankings
+    rankings.forEach((rank) => {
+      displayData.push({
+        model: rank.model,
+        ranking: rank.ranking,
+        isStreaming: false,
+        isComplete: true,
+        hasError: false,
+        isEmpty: !rank.ranking,
+        parsed_ranking: rank.parsed_ranking,
+      });
+    });
+  }
+
+  // Auto-select first tab with content
+  useEffect(() => {
+    if (displayData.length > 0 && activeTab >= displayData.length) {
+      setActiveTab(0);
+    }
+  }, [displayData.length, activeTab]);
+
+  if (displayData.length === 0 && !isLoading) {
     return null;
   }
+
+  // Show loading state if stage2 is loading but no streaming data yet
+  if (displayData.length === 0 && isLoading) {
+    return (
+      <div className="stage stage2">
+        <h3 className="stage-title">Stage 2: Peer Rankings</h3>
+        <div className="stage-loading">
+          <div className="loading-spinner"></div>
+          <span>Waiting for peer evaluations...</span>
+        </div>
+      </div>
+    );
+  }
+
+  const activeData = displayData[activeTab] || displayData[0];
 
   return (
     <div className="stage stage2">
@@ -32,33 +85,49 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
       </p>
 
       <div className="tabs">
-        {rankings.map((rank, index) => (
+        {displayData.map((data, index) => (
           <button
-            key={index}
-            className={`tab ${activeTab === index ? 'active' : ''}`}
+            key={data.model}
+            className={`tab ${activeTab === index ? 'active' : ''} ${data.isStreaming ? 'streaming' : ''} ${data.hasError || data.isEmpty ? 'error' : ''} ${data.isComplete && !data.isEmpty ? 'complete' : ''}`}
             onClick={() => setActiveTab(index)}
           >
-            {rank.model.split('/')[1] || rank.model}
+            {data.isStreaming && <span className="status-icon streaming-dot" title="Generating..."></span>}
+            {data.isComplete && !data.isEmpty && <span className="status-icon complete-icon" title="Complete">✓</span>}
+            {(data.hasError || data.isEmpty) && <span className="status-icon error-icon" title={data.hasError ? 'Error' : 'No response'}>⚠</span>}
+            {data.model.split('/')[1] || data.model}
           </button>
         ))}
       </div>
 
       <div className="tab-content">
         <div className="ranking-model">
-          {rankings[activeTab].model}
+          {activeData.model}
+          {activeData.isStreaming && <span className="typing-indicator">●</span>}
+          {activeData.isComplete && !activeData.isEmpty && <span className="complete-badge">Complete</span>}
+          {activeData.isEmpty && <span className="error-badge">No Response</span>}
+          {activeData.hasError && <span className="error-badge">Error</span>}
         </div>
-        <div className="ranking-content markdown-content">
-          <ReactMarkdown>
-            {deAnonymizeText(rankings[activeTab].ranking, labelToModel)}
-          </ReactMarkdown>
+        <div className={`ranking-content markdown-content ${activeData.hasError || activeData.isEmpty ? 'error-text' : ''}`}>
+          {activeData.isEmpty ? (
+            <p className="empty-message">This model did not return an evaluation.</p>
+          ) : activeData.hasError ? (
+            <p className="empty-message">{activeData.ranking || 'An error occurred while generating the evaluation.'}</p>
+          ) : (
+            <>
+              <ReactMarkdown>
+                {deAnonymizeText(activeData.ranking || '', labelToModel)}
+              </ReactMarkdown>
+              {activeData.isStreaming && <span className="cursor">▊</span>}
+            </>
+          )}
         </div>
 
-        {rankings[activeTab].parsed_ranking &&
-         rankings[activeTab].parsed_ranking.length > 0 && (
+        {activeData.parsed_ranking &&
+         activeData.parsed_ranking.length > 0 && (
           <div className="parsed-ranking">
             <strong>Extracted Ranking:</strong>
             <ol>
-              {rankings[activeTab].parsed_ranking.map((label, i) => (
+              {activeData.parsed_ranking.map((label, i) => (
                 <li key={i}>
                   {labelToModel && labelToModel[label]
                     ? labelToModel[label].split('/')[1] || labelToModel[label]

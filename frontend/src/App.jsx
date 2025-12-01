@@ -250,7 +250,69 @@ function App() {
             setCurrentConversation((prev) => {
               const messages = prev.messages.map((msg, idx) =>
                 idx === prev.messages.length - 1
-                  ? { ...msg, loading: { ...msg.loading, stage2: true } }
+                  ? { ...msg, loading: { ...msg.loading, stage2: true }, stage2Streaming: {} }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_token':
+            // Append token to the specific model's stage2 streaming text (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage2Streaming?.[model] || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage2Streaming: {
+                    ...msg.stage2Streaming,
+                    [model]: {
+                      ...currentStreaming,
+                      text: currentStreaming.text + event.content,
+                    },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_complete':
+            // Mark a single model's stage2 evaluation as complete (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage2Streaming?.[model];
+                return {
+                  ...msg,
+                  stage2Streaming: {
+                    ...msg.stage2Streaming,
+                    [model]: currentStreaming
+                      ? { ...currentStreaming, complete: true }
+                      : { text: event.ranking, complete: true },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_error':
+            // Handle stage2 model error (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage2Streaming: {
+                        ...msg.stage2Streaming,
+                        [model]: { text: `Error: ${event.error}`, complete: true, error: true },
+                      },
+                    }
                   : msg
               );
               return { ...prev, messages };
@@ -277,7 +339,40 @@ function App() {
             setCurrentConversation((prev) => {
               const messages = prev.messages.map((msg, idx) =>
                 idx === prev.messages.length - 1
-                  ? { ...msg, loading: { ...msg.loading, stage3: true } }
+                  ? { ...msg, loading: { ...msg.loading, stage3: true }, stage3Streaming: { text: '', complete: false } }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage3_token':
+            // Append token to stage3 streaming text (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage3Streaming || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage3Streaming: {
+                    ...currentStreaming,
+                    text: currentStreaming.text + event.content,
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage3_error':
+            // Handle stage3 error (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage3Streaming: { text: `Error: ${event.error}`, complete: true, error: true },
+                    }
                   : msg
               );
               return { ...prev, messages };
