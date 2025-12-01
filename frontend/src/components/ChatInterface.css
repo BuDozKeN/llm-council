@@ -209,3 +209,40 @@
   background: #ccc;
   border-color: #ccc;
 }
+
+.stop-button {
+  padding: 14px 28px;
+  background: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+.stop-button:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.stop-button-inline {
+  padding: 6px 16px;
+  background: #e74c3c;
+  border: 1px solid #e74c3c;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-left: auto;
+}
+
+.stop-button-inline:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+}

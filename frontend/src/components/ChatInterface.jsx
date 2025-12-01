@@ -8,6 +8,7 @@ import './ChatInterface.css';
 export default function ChatInterface({
   conversation,
   onSendMessage,
+  onStopGeneration,
   isLoading,
   businesses = [],
   selectedBusiness,
@@ -126,6 +127,12 @@ export default function ChatInterface({
           <div className="loading-indicator">
             <div className="spinner"></div>
             <span>Consulting the council...</span>
+            <button
+              className="stop-button-inline"
+              onClick={onStopGeneration}
+            >
+              Stop
+            </button>
           </div>
         )}
 
@@ -224,13 +231,23 @@ export default function ChatInterface({
               disabled={isLoading}
               rows={3}
             />
-            <button
-              type="submit"
-              className="send-button"
-              disabled={!input.trim() || isLoading}
-            >
-              Send
-            </button>
+            {isLoading ? (
+              <button
+                type="button"
+                className="stop-button"
+                onClick={onStopGeneration}
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="send-button"
+                disabled={!input.trim()}
+              >
+                Send
+              </button>
+            )}
           </div>
         </form>
       )}

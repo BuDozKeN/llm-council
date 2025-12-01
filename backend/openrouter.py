@@ -91,19 +91,28 @@ async def query_model_stream(
             ) as response:
                 response.raise_for_status()
 
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data_str = line[6:]  # Remove "data: " prefix
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            delta = data.get('choices', [{}])[0].get('delta', {})
-                            content = delta.get('content', '')
-                            if content:
-                                yield content
-                        except json.JSONDecodeError:
-                            continue
+                # Use raw bytes with manual SSE parsing to avoid buffering issues
+                buffer = ""
+                async for chunk in response.aiter_text():
+                    buffer += chunk
+
+                    # Process complete SSE events (separated by double newlines)
+                    while "\n\n" in buffer:
+                        event, buffer = buffer.split("\n\n", 1)
+
+                        for line in event.split("\n"):
+                            if line.startswith("data: "):
+                                data_str = line[6:]
+                                if data_str.strip() == "[DONE]":
+                                    return
+                                try:
+                                    data = json.loads(data_str)
+                                    delta = data.get('choices', [{}])[0].get('delta', {})
+                                    content = delta.get('content', '')
+                                    if content:
+                                        yield content
+                                except json.JSONDecodeError:
+                                    continue
 
     except Exception as e:
         print(f"Error streaming from model {model}: {e}")

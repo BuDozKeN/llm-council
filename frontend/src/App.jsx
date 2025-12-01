@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { api } from './api';
@@ -37,6 +37,7 @@ function App() {
   const [selectedDepartment, setSelectedDepartment] = useState('standard');
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
+  const abortControllerRef = useRef(null);
 
   // Load conversations and businesses on mount
   useEffect(() => {
@@ -99,8 +100,19 @@ function App() {
     setCurrentConversationId(id);
   };
 
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+    }
+  };
+
   const handleSendMessage = async (content) => {
     if (!currentConversationId) return;
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
     try {
@@ -254,6 +266,11 @@ function App() {
             setIsLoading(false);
             break;
 
+          case 'cancelled':
+            console.log('Request cancelled');
+            setIsLoading(false);
+            break;
+
           default:
             console.log('Unknown event type:', eventType);
         }
@@ -262,8 +279,15 @@ function App() {
         departmentId: selectedDepartment !== 'standard' ? selectedDepartment : null,
         channelId: selectedChannel || null,
         styleId: selectedStyle || null,
+        signal: abortControllerRef.current?.signal,
       });
     } catch (error) {
+      // Don't treat cancellation as an error
+      if (error.name === 'AbortError') {
+        console.log('Request was cancelled');
+        setIsLoading(false);
+        return;
+      }
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
       setCurrentConversation((prev) => ({
@@ -271,6 +295,8 @@ function App() {
         messages: prev.messages.slice(0, -2),
       }));
       setIsLoading(false);
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
@@ -286,6 +312,7 @@ function App() {
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
+        onStopGeneration={handleStopGeneration}
         isLoading={isLoading}
         businesses={businesses}
         selectedBusiness={selectedBusiness}
