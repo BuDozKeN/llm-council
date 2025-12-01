@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './Triage.css';
 
 export default function Triage({
@@ -26,73 +27,68 @@ export default function Triage({
     }
   };
 
-  // Quick response helpers
-  const appendToResponse = (text) => {
-    setResponse(prev => prev ? `${prev}\n${text}` : text);
-  };
-
   if (!triageResult) return null;
 
-  const { ready, constraints, missing, enhanced_query } = triageResult;
+  const { ready, constraints, questions, enhanced_query } = triageResult;
 
-  // If ready, show success state
+  // Ready state - show summary and proceed
   if (ready) {
     return (
-      <div className="triage-container">
-        <div className="triage-user-question">
+      <div className="triage-conversation">
+        {/* User's question */}
+        <div className="triage-message user">
           <div className="message-label">You</div>
-          <div className="message-content">{originalQuestion}</div>
+          <div className="message-bubble user">{originalQuestion}</div>
         </div>
 
-        <div className="triage-response">
-          <div className="message-label">Pre-Council Check</div>
-          <div className="triage-card ready">
-            <div className="triage-header ready">
-              <span className="triage-header-icon">✓</span>
-              <span className="triage-header-text">Ready to send</span>
+        {/* AI ready response */}
+        <div className="triage-message ai">
+          <div className="message-label">Pre-Council</div>
+          <div className="message-bubble ai ready">
+            <div className="ready-header">
+              <span className="ready-icon">✓</span>
+              <span>Got it! Here's what I understood:</span>
             </div>
-            <div className="triage-body">
-              <div className="triage-constraints-grid">
-                {constraints.who && (
-                  <div className="constraint-chip">
-                    <span className="chip-label">Who</span>
-                    <span className="chip-value">{constraints.who}</span>
-                  </div>
-                )}
-                {constraints.goal && (
-                  <div className="constraint-chip">
-                    <span className="chip-label">Goal</span>
-                    <span className="chip-value">{constraints.goal}</span>
-                  </div>
-                )}
-                {constraints.budget && (
-                  <div className="constraint-chip">
-                    <span className="chip-label">Budget</span>
-                    <span className="chip-value">{constraints.budget}</span>
-                  </div>
-                )}
-                {constraints.risk && (
-                  <div className="constraint-chip">
-                    <span className="chip-label">Quality</span>
-                    <span className="chip-value">{constraints.risk}</span>
-                  </div>
-                )}
-              </div>
+            <div className="constraints-summary">
+              {constraints.who && (
+                <div className="constraint-row">
+                  <span className="constraint-label">Who:</span>
+                  <span className="constraint-value">{constraints.who}</span>
+                </div>
+              )}
+              {constraints.goal && (
+                <div className="constraint-row">
+                  <span className="constraint-label">Goal:</span>
+                  <span className="constraint-value">{constraints.goal}</span>
+                </div>
+              )}
+              {constraints.budget && (
+                <div className="constraint-row">
+                  <span className="constraint-label">Budget:</span>
+                  <span className="constraint-value">{constraints.budget}</span>
+                </div>
+              )}
+              {constraints.risk && (
+                <div className="constraint-row">
+                  <span className="constraint-label">Priority:</span>
+                  <span className="constraint-value">{constraints.risk}</span>
+                </div>
+              )}
             </div>
-            <div className="triage-ready-actions">
+            <div className="ready-actions">
               <button
-                className="triage-proceed-btn"
+                className="proceed-btn"
                 onClick={() => onProceed(enhanced_query)}
                 disabled={isLoading}
               >
                 {isLoading ? 'Sending...' : 'Send to Council →'}
               </button>
               <button
-                className="triage-edit-btn"
+                className="edit-btn"
                 onClick={onSkip}
                 disabled={isLoading}
               >
-                Edit
+                Start over
               </button>
             </div>
           </div>
@@ -101,172 +97,67 @@ export default function Triage({
     );
   }
 
-  // Not ready - show clean question cards
+  // Not ready - show conversation
   return (
-    <div className="triage-container">
-      <div className="triage-user-question">
+    <div className="triage-conversation">
+      {/* User's question */}
+      <div className="triage-message user">
         <div className="message-label">You</div>
-        <div className="message-content">{originalQuestion}</div>
+        <div className="message-bubble user">{originalQuestion}</div>
       </div>
 
-      <div className="triage-response">
-        <div className="message-label">Pre-Council Check</div>
-        <div className="triage-card needs-info">
-          <div className="triage-header needs-info">
-            <span className="triage-header-icon">?</span>
-            <span className="triage-header-text">Quick context needed</span>
-          </div>
-
-          <div className="triage-body">
-            {/* Question Cards */}
-            <div className="triage-questions-grid">
-              {missing?.includes('who') && (
-                <div className="question-card">
-                  <div className="question-title">Who's handling this?</div>
-                  <div className="quick-options">
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('I (founder) will do this myself')}
-                    >
-                      Me (Founder)
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('My developer will handle this')}
-                    >
-                      Developer
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Will hire someone for this')}
-                    >
-                      Hire someone
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {missing?.includes('goal') && (
-                <div className="question-card">
-                  <div className="question-title">What's the priority?</div>
-                  <div className="quick-options">
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Need revenue/cash flow now (survival)')}
-                    >
-                      Cash flow NOW
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Building for long-term value/exit')}
-                    >
-                      Long-term value
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {missing?.includes('budget') && (
-                <div className="question-card">
-                  <div className="question-title">Budget for this?</div>
-                  <div className="quick-options">
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('$0 budget - use existing resources only')}
-                    >
-                      $0
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Small budget available (under $500)')}
-                    >
-                      Under $500
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Have budget to invest')}
-                    >
-                      Can invest
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {missing?.includes('risk') && (
-                <div className="question-card">
-                  <div className="question-title">Speed vs Quality?</div>
-                  <div className="quick-options">
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Speed is priority - good enough is fine')}
-                    >
-                      Speed first
-                    </button>
-                    <button
-                      type="button"
-                      className="quick-btn"
-                      onClick={() => appendToResponse('Quality is non-negotiable')}
-                    >
-                      Quality first
-                    </button>
-                  </div>
-                </div>
-              )}
+      {/* AI asking for context */}
+      <div className="triage-message ai">
+        <div className="message-label">Pre-Council</div>
+        <div className="message-bubble ai">
+          {questions ? (
+            <div className="ai-questions">
+              <ReactMarkdown>{questions}</ReactMarkdown>
             </div>
-
-            {/* Show already known constraints if any */}
-            {Object.values(constraints).some(v => v) && (
-              <div className="triage-known-inline">
-                <span className="known-label">Already noted:</span>
-                {constraints.who && <span className="known-chip">{constraints.who}</span>}
-                {constraints.goal && <span className="known-chip">{constraints.goal}</span>}
-                {constraints.budget && <span className="known-chip">{constraints.budget}</span>}
-                {constraints.risk && <span className="known-chip">{constraints.risk}</span>}
-              </div>
-            )}
-          </div>
-
-          {/* Input area */}
-          <div className="triage-input-area">
-            <form className="triage-input-form" onSubmit={handleSubmit}>
-              <textarea
-                className="triage-textarea"
-                placeholder="Type your answers or click the buttons above..."
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isLoading}
-                rows={2}
-              />
-              <div className="triage-input-actions">
-                <button
-                  type="button"
-                  className="triage-skip-btn"
-                  onClick={onSkip}
-                  disabled={isLoading}
-                >
-                  Skip
-                </button>
-                <button
-                  type="submit"
-                  className="triage-send-btn"
-                  disabled={!response.trim() || isLoading}
-                >
-                  {isLoading ? '...' : 'Continue'}
-                </button>
-              </div>
-            </form>
-          </div>
+          ) : (
+            <div className="ai-questions">
+              <p>Before I send this to the council, could you tell me:</p>
+              <ul>
+                <li>Who would handle this?</li>
+                <li>What's your budget?</li>
+                <li>Is this for immediate revenue or long-term value?</li>
+                <li>Speed or quality priority?</li>
+              </ul>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Response input */}
+      <div className="triage-input">
+        <form onSubmit={handleSubmit}>
+          <textarea
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your answer..."
+            disabled={isLoading}
+            rows={2}
+            autoFocus
+          />
+          <div className="input-actions">
+            <button
+              type="button"
+              className="skip-btn"
+              onClick={onSkip}
+              disabled={isLoading}
+            >
+              Skip
+            </button>
+            <button
+              type="submit"
+              className="send-btn"
+              disabled={!response.trim() || isLoading}
+            >
+              {isLoading ? '...' : 'Reply'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

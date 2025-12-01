@@ -1,14 +1,15 @@
-/* Triage - Modern, clean UI */
-.triage-container {
-  margin-bottom: 24px;
+/* Triage - Conversational Flow */
+.triage-conversation {
+  max-width: 700px;
+  margin: 0 auto 24px;
 }
 
-/* User's original question */
-.triage-user-question {
+/* Message structure */
+.triage-message {
   margin-bottom: 16px;
 }
 
-.triage-user-question .message-label {
+.triage-message .message-label {
   font-size: 11px;
   font-weight: 600;
   color: #888;
@@ -17,190 +18,168 @@
   letter-spacing: 0.5px;
 }
 
-.triage-user-question .message-content {
-  background: #f0f7ff;
+/* Message bubbles */
+.message-bubble {
   padding: 14px 18px;
   border-radius: 12px;
-  border: 1px solid #d0e7ff;
-  color: #333;
-  line-height: 1.5;
-  max-width: 85%;
+  line-height: 1.6;
   font-size: 15px;
 }
 
-/* Triage response */
-.triage-response {
-  margin-bottom: 16px;
+.message-bubble.user {
+  background: #f0f7ff;
+  border: 1px solid #d0e7ff;
+  color: #333;
+  max-width: 85%;
 }
 
-.triage-response .message-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #888;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Card */
-.triage-card {
+.message-bubble.ai {
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-}
-
-.triage-card.needs-info {
   border: 2px solid #ff9800;
+  color: #333;
 }
 
-.triage-card.ready {
-  border: 2px solid #4caf50;
+.message-bubble.ai.ready {
+  border-color: #4caf50;
 }
 
-/* Header */
-.triage-header {
-  padding: 14px 20px;
+/* AI questions content */
+.ai-questions {
+  color: #333;
+}
+
+.ai-questions p {
+  margin: 0 0 12px 0;
+}
+
+.ai-questions p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-questions ul,
+.ai-questions ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.ai-questions li {
+  margin-bottom: 6px;
+}
+
+/* Ready state */
+.ready-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-weight: 500;
 }
 
-.triage-header.needs-info {
-  background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
-}
-
-.triage-header.ready {
-  background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%);
-}
-
-.triage-header-icon {
-  width: 28px;
-  height: 28px;
+.ready-icon {
+  width: 22px;
+  height: 22px;
+  background: #4caf50;
+  color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
 }
 
-.triage-header.needs-info .triage-header-icon {
-  background: #ff9800;
-  color: white;
+.constraints-summary {
+  background: #f8fdf8;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
 }
 
-.triage-header.ready .triage-header-icon {
-  background: #4caf50;
-  color: white;
-}
-
-.triage-header-text {
-  font-weight: 600;
-  font-size: 15px;
-  color: #333;
-}
-
-/* Body */
-.triage-body {
-  padding: 20px;
-}
-
-/* Questions Grid */
-.triage-questions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-/* Question Card */
-.question-card {
-  background: #fafafa;
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid #eee;
-}
-
-.question-title {
-  font-weight: 600;
+.constraint-row {
+  display: flex;
+  padding: 6px 0;
+  border-bottom: 1px solid #e8f5e9;
   font-size: 14px;
-  color: #333;
-  margin-bottom: 12px;
 }
 
-/* Quick Options */
-.quick-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.constraint-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.quick-btn {
-  padding: 8px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #555;
-  cursor: pointer;
-  transition: all 0.15s ease;
+.constraint-row:first-child {
+  padding-top: 0;
 }
 
-.quick-btn:hover {
-  background: #ff9800;
-  border-color: #ff9800;
-  color: white;
-  transform: translateY(-1px);
-}
-
-.quick-btn:active {
-  transform: translateY(0);
-}
-
-/* Known constraints inline */
-.triage-known-inline {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #eee;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.known-label {
-  font-size: 12px;
-  color: #888;
-  font-weight: 500;
-}
-
-.known-chip {
-  background: #e8f5e9;
+.constraint-label {
+  font-weight: 600;
   color: #2e7d32;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
+  min-width: 70px;
+}
+
+.constraint-value {
+  color: #333;
+}
+
+.ready-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.proceed-btn {
+  padding: 10px 22px;
+  background: #4caf50;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.proceed-btn:hover:not(:disabled) {
+  background: #43a047;
+}
+
+.edit-btn {
+  padding: 10px 16px;
+  background: transparent;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.edit-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.proceed-btn:disabled,
+.edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Input area */
-.triage-input-area {
-  padding: 16px 20px 20px;
-  background: #fafafa;
-  border-top: 1px solid #eee;
+.triage-input {
+  margin-top: 8px;
 }
 
-.triage-input-form {
+.triage-input form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.triage-textarea {
+.triage-input textarea {
   width: 100%;
-  padding: 12px 16px;
+  padding: 12px 14px;
   border: 1px solid #ddd;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
   font-family: inherit;
   line-height: 1.5;
@@ -209,158 +188,55 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.triage-textarea:focus {
+.triage-input textarea:focus {
   outline: none;
   border-color: #ff9800;
   box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
 }
 
-.triage-textarea::placeholder {
-  color: #aaa;
+.triage-input textarea::placeholder {
+  color: #999;
 }
 
-.triage-input-actions {
+.input-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
-.triage-skip-btn {
-  padding: 10px 20px;
+.skip-btn {
+  padding: 8px 16px;
   background: transparent;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #666;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.triage-skip-btn:hover:not(:disabled) {
+.skip-btn:hover:not(:disabled) {
   background: #f5f5f5;
-  border-color: #ccc;
 }
 
-.triage-send-btn {
-  padding: 10px 24px;
+.send-btn {
+  padding: 8px 20px;
   background: #ff9800;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   color: white;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.triage-send-btn:hover:not(:disabled) {
+.send-btn:hover:not(:disabled) {
   background: #f57c00;
-  transform: translateY(-1px);
 }
 
-.triage-send-btn:disabled,
-.triage-skip-btn:disabled {
+.send-btn:disabled,
+.skip-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-/* Ready state - Constraints Grid */
-.triage-constraints-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.constraint-chip {
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 12px 16px;
-  border: 1px solid #e8e8e8;
-}
-
-.chip-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: #4caf50;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
-}
-
-.chip-value {
-  display: block;
-  font-size: 14px;
-  color: #333;
-  line-height: 1.4;
-}
-
-/* Ready actions */
-.triage-ready-actions {
-  display: flex;
-  gap: 12px;
-  padding: 16px 20px 20px;
-  background: linear-gradient(180deg, #f8fff8 0%, #fff 100%);
-  border-top: 1px solid #e8f5e9;
-}
-
-.triage-proceed-btn {
-  padding: 12px 28px;
-  background: #4caf50;
-  border: none;
-  border-radius: 10px;
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.triage-proceed-btn:hover:not(:disabled) {
-  background: #43a047;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.triage-edit-btn {
-  padding: 12px 20px;
-  background: transparent;
-  border: 1px solid #a5d6a7;
-  border-radius: 10px;
-  color: #2e7d32;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.triage-edit-btn:hover:not(:disabled) {
-  background: #e8f5e9;
-}
-
-.triage-proceed-btn:disabled,
-.triage-edit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .triage-questions-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .triage-constraints-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-options {
-    flex-direction: column;
-  }
-
-  .quick-btn {
-    width: 100%;
-    text-align: center;
-  }
 }
