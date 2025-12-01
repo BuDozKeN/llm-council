@@ -59,9 +59,17 @@ RESPONSE FORMAT (JSON):
   "enhanced_query": "Only populate if ready=true. The question enhanced with extracted constraints."
 }
 
-Make your questions conversational and specific to their topic. For example:
-- "Before we discuss billboards, who would handle this - are you thinking of doing this yourself, or hiring someone?"
-- "What's your budget for this marketing initiative?"
+FORMAT YOUR QUESTIONS AS A BULLETED LIST - this is critical for readability:
+
+Example good response:
+"Before the council weighs in on billboards, a few quick questions:
+
+• **Who's handling this?** Are you doing this yourself, or hiring an agency?
+• **Budget?** What can you spend on outdoor advertising?
+• **Goal?** Is this for immediate brand awareness or long-term positioning?
+• **Speed vs quality?** Do we need this fast, or does it need to be perfect?"
+
+Keep each bullet SHORT and scannable. One question per bullet. Use **bold** for the key word.
 
 USER INPUT TO ANALYZE:
 """
@@ -87,11 +95,15 @@ Respond with JSON:
     "risk": "value from user's responses, or null if still not specified"
   }},
   "missing": ["list any constraints still not specified by the user"],
-  "questions": "If not ready, ask conversationally for the remaining missing information.",
+  "questions": "If not ready, use BULLET POINTS to ask for remaining info. Keep it short and scannable.",
   "enhanced_query": "If ready, combine the original question with all the constraint info into a clear query."
 }}
 
-Remember: Only mark constraints as filled if the user has explicitly provided that information in their responses.
+FORMAT: Use bullet points (•) with **bold** labels. One short question per bullet. Example:
+"Thanks! Just need a couple more things:
+
+• **Budget?** Roughly how much can you spend?
+• **Timeline?** Do we need this fast or can we take our time?"
 """
 
 
