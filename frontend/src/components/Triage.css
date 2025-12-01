@@ -1,230 +1,193 @@
-/* Triage - consistent with main chat UI */
+/* Triage - Modern, clean UI */
 .triage-container {
   margin-bottom: 24px;
 }
 
-/* User's original question - same style as chat */
+/* User's original question */
 .triage-user-question {
   margin-bottom: 16px;
 }
 
 .triage-user-question .message-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
+  color: #888;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .triage-user-question .message-content {
   background: #f0f7ff;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 14px 18px;
+  border-radius: 12px;
   border: 1px solid #d0e7ff;
   color: #333;
-  line-height: 1.6;
-  max-width: 80%;
+  line-height: 1.5;
+  max-width: 85%;
+  font-size: 15px;
 }
 
-/* Triage response card - like a stage card */
+/* Triage response */
 .triage-response {
   margin-bottom: 16px;
 }
 
 .triage-response .message-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
+  color: #888;
+  margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+/* Card */
 .triage-card {
   background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
 .triage-card.needs-info {
-  border-color: #ff9800;
-  border-width: 2px;
+  border: 2px solid #ff9800;
 }
 
 .triage-card.ready {
-  border-color: #4caf50;
-  border-width: 2px;
+  border: 2px solid #4caf50;
 }
 
-/* Card header */
+/* Header */
 .triage-header {
-  padding: 14px 18px;
-  background: #fafafa;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 14px 20px;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 .triage-header.needs-info {
-  background: #fff8e1;
-  border-bottom-color: #ffe0b2;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff 100%);
 }
 
 .triage-header.ready {
-  background: #e8f5e9;
-  border-bottom-color: #c8e6c9;
+  background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%);
 }
 
 .triage-header-icon {
-  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.triage-header.needs-info .triage-header-icon {
+  background: #ff9800;
+  color: white;
+}
+
+.triage-header.ready .triage-header-icon {
+  background: #4caf50;
+  color: white;
 }
 
 .triage-header-text {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 15px;
   color: #333;
 }
 
-/* Card body */
+/* Body */
 .triage-body {
-  padding: 18px;
+  padding: 20px;
 }
 
-/* Known constraints section */
-.triage-known {
-  margin-bottom: 16px;
+/* Questions Grid */
+.triage-questions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
 }
 
-.triage-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4caf50;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+/* Question Card */
+.question-card {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #eee;
 }
 
-.triage-section-title.missing {
-  color: #f57c00;
-}
-
-.triage-known-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.triage-known-list li {
-  padding: 6px 0;
-  font-size: 14px;
-  color: #333;
-  display: flex;
-  gap: 8px;
-}
-
-.triage-known-list li strong {
-  color: #2e7d32;
-  min-width: 70px;
-}
-
-/* Missing constraints section */
-.triage-missing {
-  background: #fff8e1;
-  border-radius: 6px;
-  padding: 14px;
-  border-left: 4px solid #ff9800;
-}
-
-.triage-missing-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.triage-missing-item {
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 152, 0, 0.15);
-}
-
-.triage-missing-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.triage-missing-item:first-child {
-  padding-top: 0;
-}
-
-.triage-missing-title {
+.question-title {
   font-weight: 600;
   font-size: 14px;
-  color: #e65100;
-  margin-bottom: 4px;
-}
-
-.triage-missing-hint {
-  font-size: 13px;
-  color: #666;
-  font-style: italic;
-}
-
-/* AI's custom questions */
-.triage-questions {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.triage-questions .markdown-content {
-  font-size: 14px;
   color: #333;
-  line-height: 1.6;
-}
-
-/* Ready state - constraints summary */
-.triage-summary {
-  margin-bottom: 16px;
-}
-
-.triage-summary-intro {
-  font-size: 14px;
-  color: #666;
   margin-bottom: 12px;
 }
 
-.triage-summary-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.triage-summary-list li {
-  padding: 8px 0;
-  font-size: 14px;
-  color: #333;
+/* Quick Options */
+.quick-options {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  border-bottom: 1px solid #e8f5e9;
 }
 
-.triage-summary-list li:last-child {
-  border-bottom: none;
+.quick-btn {
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.triage-summary-list strong {
+.quick-btn:hover {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.quick-btn:active {
+  transform: translateY(0);
+}
+
+/* Known constraints inline */
+.triage-known-inline {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.known-label {
+  font-size: 12px;
+  color: #888;
+  font-weight: 500;
+}
+
+.known-chip {
+  background: #e8f5e9;
   color: #2e7d32;
-  min-width: 120px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-/* Input area - matches main chat input style */
+/* Input area */
 .triage-input-area {
-  padding: 18px;
-  border-top: 1px solid #e0e0e0;
+  padding: 16px 20px 20px;
   background: #fafafa;
+  border-top: 1px solid #eee;
 }
 
 .triage-input-form {
@@ -235,14 +198,15 @@
 
 .triage-textarea {
   width: 100%;
-  padding: 14px;
-  border: 1px solid #d0d0d0;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
   font-size: 14px;
   font-family: inherit;
   line-height: 1.5;
   resize: none;
   background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .triage-textarea:focus {
@@ -252,7 +216,7 @@
 }
 
 .triage-textarea::placeholder {
-  color: #999;
+  color: #aaa;
 }
 
 .triage-input-actions {
@@ -262,19 +226,20 @@
 }
 
 .triage-skip-btn {
-  padding: 10px 18px;
-  background: #fff;
-  border: 1px solid #d0d0d0;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid #ddd;
   border-radius: 8px;
   color: #666;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .triage-skip-btn:hover:not(:disabled) {
   background: #f5f5f5;
-  border-color: #bbb;
+  border-color: #ccc;
 }
 
 .triage-send-btn {
@@ -286,11 +251,12 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .triage-send-btn:hover:not(:disabled) {
   background: #f57c00;
+  transform: translateY(-1px);
 }
 
 .triage-send-btn:disabled,
@@ -299,43 +265,74 @@
   cursor: not-allowed;
 }
 
-/* Ready state actions */
+/* Ready state - Constraints Grid */
+.triage-constraints-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.constraint-chip {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 12px 16px;
+  border: 1px solid #e8e8e8;
+}
+
+.chip-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4caf50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.chip-value {
+  display: block;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.4;
+}
+
+/* Ready actions */
 .triage-ready-actions {
   display: flex;
   gap: 12px;
-  padding: 18px;
-  border-top: 1px solid #c8e6c9;
-  background: #f1f8e9;
+  padding: 16px 20px 20px;
+  background: linear-gradient(180deg, #f8fff8 0%, #fff 100%);
+  border-top: 1px solid #e8f5e9;
 }
 
 .triage-proceed-btn {
-  padding: 12px 24px;
+  padding: 12px 28px;
   background: #4caf50;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   color: white;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  transition: all 0.15s;
 }
 
 .triage-proceed-btn:hover:not(:disabled) {
   background: #43a047;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .triage-edit-btn {
-  padding: 12px 18px;
-  background: #fff;
+  padding: 12px 20px;
+  background: transparent;
   border: 1px solid #a5d6a7;
-  border-radius: 8px;
+  border-radius: 10px;
   color: #2e7d32;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 
 .triage-edit-btn:hover:not(:disabled) {
@@ -346,4 +343,24 @@
 .triage-edit-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .triage-questions-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .triage-constraints-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-options {
+    flex-direction: column;
+  }
+
+  .quick-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
