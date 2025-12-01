@@ -84,14 +84,14 @@ export default function ChatInterface({
                 <div className="assistant-message">
                   <div className="message-label">AI Council</div>
 
-                  {/* Stage 1 */}
-                  {msg.loading?.stage1 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
-                    </div>
+                  {/* Stage 1 - show with streaming or final responses */}
+                  {(msg.loading?.stage1 || msg.stage1 || (msg.stage1Streaming && Object.keys(msg.stage1Streaming).length > 0)) && (
+                    <Stage1
+                      responses={msg.stage1}
+                      streaming={msg.stage1Streaming}
+                      isLoading={msg.loading?.stage1}
+                    />
                   )}
-                  {msg.stage1 && <Stage1 responses={msg.stage1} />}
 
                   {/* Stage 2 */}
                   {msg.loading?.stage2 && (

@@ -115,6 +115,7 @@ function App() {
       const assistantMessage = {
         role: 'assistant',
         stage1: null,
+        stage1Streaming: {}, // Track streaming text per model: { 'model-id': { text: '', complete: false } }
         stage2: null,
         stage3: null,
         metadata: null,
@@ -139,6 +140,51 @@ function App() {
               const messages = [...prev.messages];
               const lastMsg = messages[messages.length - 1];
               lastMsg.loading.stage1 = true;
+              lastMsg.stage1Streaming = {}; // Reset streaming state
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_token':
+            // Append token to the specific model's streaming text
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              const model = event.model;
+              if (!lastMsg.stage1Streaming[model]) {
+                lastMsg.stage1Streaming[model] = { text: '', complete: false };
+              }
+              lastMsg.stage1Streaming[model].text += event.content;
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_complete':
+            // Mark a single model as complete
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              const model = event.model;
+              if (!lastMsg.stage1Streaming[model]) {
+                lastMsg.stage1Streaming[model] = { text: event.response, complete: true };
+              } else {
+                lastMsg.stage1Streaming[model].complete = true;
+              }
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_error':
+            // Handle model error
+            setCurrentConversation((prev) => {
+              const messages = [...prev.messages];
+              const lastMsg = messages[messages.length - 1];
+              const model = event.model;
+              lastMsg.stage1Streaming[model] = {
+                text: `Error: ${event.error}`,
+                complete: true,
+                error: true
+              };
               return { ...prev, messages };
             });
             break;

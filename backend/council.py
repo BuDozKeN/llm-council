@@ -1,7 +1,8 @@
 """3-stage LLM Council orchestration."""
 
-from typing import List, Dict, Any, Tuple, Optional
-from .openrouter import query_models_parallel, query_model
+import asyncio
+from typing import List, Dict, Any, Tuple, Optional, AsyncGenerator
+from .openrouter import query_models_parallel, query_model, query_model_stream
 from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
 from .context_loader import get_system_prompt_with_context
 
@@ -54,6 +55,103 @@ async def stage1_collect_responses(
             })
 
     return stage1_results
+
+
+async def stage1_stream_responses(
+    user_query: str,
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 1 with streaming: Collect individual responses from all council models,
+    yielding token updates as they arrive.
+
+    Args:
+        user_query: The user's question
+        business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
+
+    Yields:
+        Dicts with 'type' (token/complete), 'model', and 'content'/'response'
+    """
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": user_query})
+
+    # Track accumulated content for each model
+    model_content: Dict[str, str] = {model: "" for model in COUNCIL_MODELS}
+    model_complete: Dict[str, bool] = {model: False for model in COUNCIL_MODELS}
+
+    async def stream_single_model(model: str):
+        """Stream tokens from a single model and yield updates."""
+        try:
+            async for chunk in query_model_stream(model, messages):
+                model_content[model] += chunk
+                yield {"type": "stage1_token", "model": model, "content": chunk}
+            model_complete[model] = True
+            yield {"type": "stage1_model_complete", "model": model, "response": model_content[model]}
+        except Exception as e:
+            print(f"Error streaming from {model}: {e}")
+            model_complete[model] = True
+            yield {"type": "stage1_model_error", "model": model, "error": str(e)}
+
+    # Create async generators for all models
+    generators = [stream_single_model(model) for model in COUNCIL_MODELS]
+
+    # Merge all streams using asyncio
+    async def merge_streams():
+        """Merge multiple async generators into one."""
+        pending = set()
+        gen_map = {}
+
+        for i, gen in enumerate(generators):
+            task = asyncio.create_task(gen.__anext__())
+            pending.add(task)
+            gen_map[task] = (i, gen)
+
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+
+            for task in done:
+                idx, gen = gen_map.pop(task)
+                try:
+                    result = task.result()
+                    yield result
+
+                    # Schedule next iteration
+                    next_task = asyncio.create_task(gen.__anext__())
+                    pending.add(next_task)
+                    gen_map[next_task] = (idx, gen)
+                except StopAsyncIteration:
+                    # This generator is done
+                    pass
+                except Exception as e:
+                    print(f"Error in stream merge: {e}")
+
+    async for event in merge_streams():
+        yield event
+
+    # Yield final complete event with all results
+    final_results = [
+        {"model": model, "response": content}
+        for model, content in model_content.items()
+        if content  # Only include models that returned content
+    ]
+    yield {"type": "stage1_all_complete", "data": final_results}
 
 
 async def stage2_collect_rankings(

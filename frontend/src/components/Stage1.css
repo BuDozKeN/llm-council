@@ -63,3 +63,79 @@
   color: #333;
   line-height: 1.6;
 }
+
+.response-text.error-text {
+  color: #d32f2f;
+}
+
+/* Streaming indicators */
+.tab.streaming {
+  position: relative;
+}
+
+.streaming-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #4caf50;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tab.error {
+  border-color: #d32f2f;
+  color: #d32f2f;
+}
+
+.error-indicator {
+  margin-left: 4px;
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.typing-indicator {
+  display: inline-block;
+  margin-left: 8px;
+  color: #4caf50;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.cursor {
+  display: inline-block;
+  color: #4a90e2;
+  animation: blink 0.8s infinite;
+  margin-left: 2px;
+}
+
+/* Loading state */
+.stage-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: #666;
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e0e0e0;
+  border-top-color: #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

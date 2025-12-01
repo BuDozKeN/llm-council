@@ -1,7 +1,8 @@
 """OpenRouter API client for making LLM requests."""
 
 import httpx
-from typing import List, Dict, Any, Optional
+import json
+from typing import List, Dict, Any, Optional, AsyncGenerator
 from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
 
 
@@ -51,6 +52,62 @@ async def query_model(
     except Exception as e:
         print(f"Error querying model {model}: {e}")
         return None
+
+
+async def query_model_stream(
+    model: str,
+    messages: List[Dict[str, str]],
+    timeout: float = 120.0
+) -> AsyncGenerator[str, None]:
+    """
+    Query a single model via OpenRouter API with streaming.
+
+    Args:
+        model: OpenRouter model identifier (e.g., "openai/gpt-4o")
+        messages: List of message dicts with 'role' and 'content'
+        timeout: Request timeout in seconds
+
+    Yields:
+        Text chunks as they arrive from the model
+    """
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "model": model,
+        "messages": messages,
+        "stream": True,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream(
+                "POST",
+                OPENROUTER_API_URL,
+                headers=headers,
+                json=payload
+            ) as response:
+                response.raise_for_status()
+
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:]  # Remove "data: " prefix
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            data = json.loads(data_str)
+                            delta = data.get('choices', [{}])[0].get('delta', {})
+                            content = delta.get('content', '')
+                            if content:
+                                yield content
+                        except json.JSONDecodeError:
+                            continue
+
+    except Exception as e:
+        print(f"Error streaming from model {model}: {e}")
+        yield f"[Error: {str(e)}]"
 
 
 async def query_models_parallel(
