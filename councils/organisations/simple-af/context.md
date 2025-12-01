@@ -1,7 +1,7 @@
 # SimpleAF - Business Context
 
 **For LLM Council Decision-Making**
-**Last Updated:** 2025-11-30
+**Last Updated:** 2025-12-02
 
 ---
 
@@ -410,11 +410,14 @@ This is recognised as a **binary risk factor** and will be addressed as a priori
 - **Could disconnect developer today:** YES - Core platform would survive
 - **Documentation:** Limited to what's in GitHub (code comments, README)
 
-### Risk Assessment:
+### Risk Assessment (December 2025 Update):
+- **Ownership status: CONFIRMED** — Founder is the owner, not a hostage
+- **GitHub repo:** Under founder's account; developer has shared access that can be revoked immediately
 - **Mitigated:** If developer leaves, founder retains full access to codebase
 - **Remaining risk:** Founder not deeply technical, would need time to onboard replacement
-- **Positive:** Good chunk of work preserved even without developer
-- Developer has implementation knowledge but founder controls access
+- **Malicious exit scenario:** Developer could delete code before revocation—would be painful but survivable (founder has backup copies)
+- **Recovery estimate:** Hiring new developer would require significant time, cost, and operational disruption
+- **Bottom line:** IP is not yet legally ring-fenced, but operational control is confirmed
 
 ### Mitigation Strategy:
 - Establish NDA/IP assignment agreement
@@ -436,6 +439,7 @@ This is recognised as a **binary risk factor** and will be addressed as a priori
 - Document upload alternative for existing JDs
 - Structured report format for easy review
 - Clear scoring bands for quick decision-making
+- **Voice agents validated:** Users consistently express they "love" Alexandra—potential UX differentiator
 
 ### Planned Improvements:
 - Core Signal integration (eliminates manual export)
@@ -473,6 +477,22 @@ This is recognised as a **binary risk factor** and will be addressed as a priori
 
 **Council Question:** Should we ring-fence these 2 weeks immediately, or is the €600/month operator bridge sufficient to buy more time?
 
+### Revenue Milestones (December 2025 Update)
+
+**Month-6 Target (June 2026):** $10,000 MRR
+
+**Reverse-engineered targets:**
+- At $49/analysis: ~204 analyses per month required
+- At 2-3 analyses per customer per month: ~70-100 active paying customers needed
+- Current state (Dec 2025): 1 paying customer
+- Timeline: ~25 weeks to June 2026
+- **Required pace: 3-4 new paying customers per week starting January 2026**
+
+**Feasibility Assessment:**
+- At ~3% DM→Paid conversion rate: 100 LinkedIn DMs/week = ~3 customers/week ✓
+- Aggressive but achievable if LinkedIn campaign runs consistently
+- **Critical dependency:** €600/month operator bridge essential—founder cannot manually deliver 50+ analyses/month
+
 ### Ultimate Goal:
 1. User calls Alexandra OR provides a document
 2. Alexandra Copilot (AC) interacts with user to gather all necessary information
@@ -481,13 +501,23 @@ This is recognised as a **binary risk factor** and will be addressed as a priori
 5. **Results delivered within the hour**
 
 ### Core Signal Integration:
+
+**⚠️ CRITICALITY: MUST-HAVE (Not Nice-to-Have)**
+
 Future data source—a comprehensive LinkedIn dataset that will replace manual Sales Navigator exports and enable faster, more scalable candidate sourcing. This also resolves LinkedIn ToS grey areas.
 
-**Target Timeline:** Early January 2025 (~4–5 weeks from November 2025)
+**Why it's mission-critical:**
+- Transforms business from **manual service** to **automated SaaS**
+- Reduces delivery time from current slow, grey-area scraping to **under 1 hour**
+- Enables scalability without proportional headcount increase
+- **Without Core Signal:** Business survives but cannot scale to exit-ready valuation. Stuck in service mode with constrained margins.
+- **With Core Signal:** Path to $10k MRR and beyond becomes viable
+
+**Target Timeline:** Early January 2026 (~4–5 weeks from December 2025)
 
 This is a priority integration that moves the platform from "grey area" Sales Navigator scraping to a compliant, "white hat" data source.
 
-**Dependency:** Developer bandwidth—not a revenue milestone. Work needs to commence as soon as possible to meet this timeline.
+**Dependency:** Developer bandwidth—not a revenue milestone. Work needs to commence as soon as possible to meet this timeline. **Ring-fence developer time immediately.**
 
 ---
 
@@ -507,6 +537,13 @@ This is a priority integration that moves the platform from "grey area" Sales Na
 - 50/50 ownership split = $2.5 million per partner
 - "Life-changing number" that makes both founders happy
 - Both partners fully aligned on this number and timeline
+
+### Revenue Waypoint (December 2025 Update)
+**Milestone:** $10,000 MRR by June 2026 (Month 6)
+
+This is the operational target that feeds the exit thesis. At typical SaaS multiples (3-5x ARR), $120k ARR would value the company at $360k-$600k—still far from $5M. However, demonstrating growth trajectory, product-market fit, and scalable operations is what attracts acquirers at premium multiples for IP/technology value.
+
+**Implication:** The $10k MRR target is a proof point, not the exit valuation driver. The exit will likely be driven by strategic value (technology, team, customer base) rather than pure revenue multiples.
 
 ### Exit Flexibility
 **Position:** Not rigidly attached to $5M figure.
@@ -604,8 +641,22 @@ Tech stack choices are NOT constraints—council can suggest alternatives if ben
 - **Primary reason cited:** "No budget"
 - **Secondary factors:** Still gathering data; several meetings scheduled
 - **Caveat:** Very early stage—free trial users still active, no clear patterns yet
+- **Sample size:** Insufficient to draw meaningful conclusions on pricing power
 
 **Commitment:** Will report structured feedback to Council after 10+ trial completions.
+
+### Trial User Behavior (December 2025 Update)
+- **Engagement confirmed:** Users who received shortlists did engage—they accepted and contacted candidates
+- **Placement tracking:** NOT tracked by design. Value proposition ends at qualified shortlist delivery.
+- **Rationale:** Tracking placements is outside our scope and resource constraints. Our job is relevance, not placement.
+- **Implication:** Cannot currently prove placement success rates. Quality differentiator is based on user engagement with shortlisted candidates, not confirmed hires.
+
+### User Feedback Signals
+- **No definitive "wow" moment** from a specific role or search yet
+- **Strong positive signal:** Voice agents (Alexandra) receive consistent "love" feedback from users
+- **Hypothesis:** Voice agent may be UX differentiator rather than role-type differentiator
+- **Constraint:** Resource limitations prevent systematic feedback collection
+- **Action needed:** Implement lightweight follow-up (Day-14 email) to track interview progression
 
 **Pipeline / Potential Buyers:**
 - **Company buyers (acquirers):** Starting from zero - no list of potential acquirers yet
@@ -641,26 +692,28 @@ When making recommendations for Simple AF Jobs:
 
 ## Key Decisions Pending Council Input
 
-*Last Updated: 2025-11-30*
+*Last Updated: 2025-12-02*
 
 | Area | Current Status | Risk | Council Input Needed |
 |------|----------------|------|---------------------|
 | Funnel Conversion | ~3% DM→Paid (estimated) | Unknown | Is 3% reasonable for early-stage B2B SaaS? |
 | Automation Priority | 2 weeks dev time required | Medium | Ring-fence now or use operator bridge? |
-| Developer IP | Can deploy independently; no NDA | **HIGH** | Acknowledged as binary risk |
+| Developer IP | Owner confirmed; can revoke access; no NDA yet | **HIGH** | Execute NDA immediately (don't wait for UK incorporation) |
 | ICP Strategy | Easy vs hard roles unresolved | Low | Focus on volume (easy) or differentiation (hard)? |
 | Pricing | $49 "WTFN"; no pushback yet | Low | A/B test $79–$99 at 20–30 customers? |
 | Exit Flexibility | Open to €3M clean exit | N/A | Optimise for profitability over growth? |
-| LinkedIn Grey Area | Willing to operate 6–9 months | Medium | Acknowledged; Core Signal by Jan 2025 |
+| Core Signal | **MUST-HAVE** for SaaS transformation | **HIGH** | Ring-fence dev time; target Jan 2026 |
 | Exit Multiple | Unknown | Medium | Council to advise on realistic range |
 | Acquirer Hypothesis | Categories identified, no targets | Medium | Which category to prioritise? |
-| Drop-off Reasons | "No budget" cited | Unknown | Gather data from next 10 trials |
+| Drop-off Reasons | "No budget" cited; sample size insufficient | Unknown | Gather data from next 10 trials |
+| $10k MRR Target | June 2026 milestone set | Medium | Track: 3-4 new customers/week from Jan |
+| Quality Proof | No placement tracking by design | Medium | Implement Day-14 follow-up for interview tracking |
 
 ### Summary: Risk Levels
 
 | Risk Level | Items |
 |------------|-------|
-| **HIGH** | Developer IP (can deploy independently) |
-| **Medium** | Automation priority, LinkedIn ToS, Exit multiple unknown, Acquirer targeting |
+| **HIGH** | Developer IP (no NDA), Core Signal (mission-critical) |
+| **Medium** | Automation priority, Exit multiple unknown, Acquirer targeting, $10k MRR pace, Quality proof gap |
 | **Low** | ICP strategy, Pricing |
 | **Unknown** | Funnel conversion validity, Drop-off patterns |
