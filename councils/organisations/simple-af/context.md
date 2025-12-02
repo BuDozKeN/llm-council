@@ -197,83 +197,16 @@ Revenue model assumes a "happy" recruiter will run at least 10 job searches per 
 
 **OUTPUT:** Candidate data for analysis
 
-### STEP 4: ALEXANDRA PROFILER v5.0 (Evidence-Tiered Framework)
+### STEP 4: ALEXANDRA PROFILER (Core AI Screening)
 
-**Literal Checks (Hard Vetos):**
-- Location compatibility
-- Excluded company check
-- Profile quality check
+**What it does:**
+- Reads full candidate profiles using Claude AI
+- Performs semantic reasoning (not keyword matching)
+- Scores candidates 0-100% across multiple dimensions
+- Provides evidence-backed justification for every score
+- Detects red flags (founders, retired, overqualified, etc.)
 
----
-
-#### THE THREE-TIER EVIDENCE HIERARCHY
-
-Solves: "Skills Section Trojan Horse" and "Over-Reliance on Inference"
-
-| Tier | Definition | Weight | Rule |
-|------|------------|--------|------|
-| **Tier 1: Explicit** | Found in Work History, Education, or Projects with clear context (e.g., "Led M&A due diligence for 3 years") | 100% | Required for "Strong Match" (80%+) |
-| **Tier 2: Strong Inference** | Inferred from Job Title or Company Type with high certainty (e.g., "Investment Banking Analyst" implies "Financial Modeling") | 75% | Acceptable, but creates a flag |
-| **Tier 3: Weak / Self-Declared** | Found ONLY in Skills Section or "About Me" without job history corroboration | 25% | **THE FIREWALL:** This counts as a "Gap" |
-
-**The Firewall Rule:** If a candidate matches a MUST-HAVE requirement only via Tier 3 evidence (e.g., "Python" is just a tag in the Skills list), they receive max 25% credit for that skill.
-
----
-
-#### GRADUATED EXPERIENCE SCORING
-
-Solves: "Rigid Experience Filters" - Never discard a near-miss candidate
-
-| Candidate Scenario | Classification | Scoring Action | Result |
-|--------------------|----------------|----------------|--------|
-| 2–6 Years (in range) | In Range | 100% Score | No penalty |
-| 1.5 Years (75% of min) | Near-Miss | -15% Penalty | **Retained.** Can still score up to 85% if skills are perfect |
-| 0.5 Years (<25% of min) | Too Junior | Score Cap at 40% | Insufficient evidence to justify risk |
-| 8 Years (slightly over) | Senior | -10% Penalty | Retained, noted as potential budget risk |
-| 15+ Years (way over) | Flight Risk | Score Cap at 59% | Flagged as "Likely Overqualified / Flight Risk" |
-
----
-
-#### DEFENSIBILITY SCORE CAP
-
-Solves: "Critical Instruction Disconnect" - Prevents high scores when MUST-HAVEs are missing
-
-**Rule:** If a MUST-HAVE requirement is missing (or has only Tier 3 evidence), the **Maximum Global Score is Capped at 59%** (Moderate Match).
-
-**Why:** This allows showing the candidate to the client with the note: *"Match found, but score restricted to 59% because they lack evidence of [Critical Skill], despite high scores elsewhere."* This proves you read the brief.
-
----
-
-#### DIMENSIONAL SCORING (Standardized Weights)
-
-| Dimension | Weight | Description |
-|-----------|--------|-------------|
-| Core Competencies (Hard Skills) | 40% | Technical skills with evidence |
-| Domain/Sector Match | 30% | Industry and function alignment |
-| Experience/Tenure Profile | 20% | Years + relevance of experience |
-| Geographic/Logistical Fit | 10% | Location, remote, relocation |
-| Critical Qualifiers (Red Flags) | -5% | Deductions for red flags |
-
----
-
-#### RED FLAG DETECTION
-
-- Founders (won't take employed role)
-- Retired candidates
-- Overqualified/underqualified (graduated penalties above)
-- Fractional/interim roles
-
----
-
-#### EVIDENCE TRACE OUTPUT
-
-For every score, the profiler must provide:
-```
-- Requirement: [Name]
-- Evidence Found: "[Quote from profile]"
-- Location: [Section Name] (Tier [1/2/3])
-- Score Impact: [Points]
-```
+**Key Principle:** Evidence-tiered scoring ensures candidates can't game the system by listing keywords without proof. Work history evidence > Skills section claims.
 
 **OUTPUT:** Scored and ranked candidates with evidence traces
 
@@ -302,56 +235,16 @@ CLIENT SAYS → WE CAPTURE → WE ACT → WE DELIVER
 
 Example:
 - CLIENT: "I need someone with M&A experience"
-- CAPTURED: Job brief records "M&A Experience" as MUST-HAVE requirement
-- ACTION: Profiler assesses each candidate for M&A experience with Evidence Tier
-- DELIVERY: Report shows: ✅ YES | Tier 1 | "Led due diligence on 15 transactions" (Work History)
+- CAPTURED: Job brief records "M&A Experience" as requirement
+- ACTION: Profiler assesses each candidate for M&A experience
+- DELIVERY: Report shows: ✅ YES | HIGH | "Led due diligence on 15 transactions"
 ```
 
 **Why This Matters:**
 - Job brief is effectively a CONTRACT with the client
 - Every recommendation traceable back to requirements
 - Every rejection documented with evidence
-- **Evidence Tier prevents "Trojan Horse" candidates** who only list keywords
-- **Score Cap (59%) ensures MUST-HAVEs are truly must-have**
 - Platform designed to be litigation-proof
-
----
-
-### Alexandra Profiler v5.0 System Prompt Structure
-
-```
-ROLE: Alexandra Profiler (Recruitment Forensic Auditor)
-
-TASK: Assess Candidate against Job Brief Requirements.
-
-SCORING RULES:
-
-1. EVIDENCE HIERARCHY (The "Trojan Horse" Defense):
-   - You must locate WHERE evidence appears.
-   - IF evidence is found ONLY in the "Skills" list or "About Me" section
-     AND is not supported by Job History descriptions,
-     THEN Evidence_Tier = 3 (Weak).
-   - Tier 3 evidence yields a maximum of 25% points for that specific requirement.
-
-2. EXPERIENCE LOGIC (The "Range Tolerance"):
-   - Calculate total relevant tenure.
-   - Target Range: [Min_Years] to [Max_Years].
-   - IF tenure is 70-99% of Min_Years: Apply -15% penalty to Experience Score (Do not discard).
-   - IF tenure is <25% of Min_Years: Cap Experience Score at 40%.
-   - IF tenure is >150% of Max_Years: Apply "Flight Risk" flag (Cap Experience Score at 50%).
-
-3. CRITICAL INSTRUCTION CAP:
-   - IF a "MUST-HAVE" requirement lacks Tier 1 (Explicit) or Tier 2 (Strong Inference) evidence:
-     - The candidate's TOTAL GLOBAL SCORE cannot exceed 59%.
-     - Flag reason: "Missing evidence for Mandatory Requirement: [Requirement Name]."
-
-OUTPUT FORMAT:
-For every score, provide the "Evidence Trace":
-- Requirement: [Name]
-- Evidence Found: "[Quote from profile]"
-- Location: [Section Name] (Tier [1/2/3])
-- Score Impact: [Points]
-```
 
 ---
 
