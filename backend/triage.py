@@ -12,7 +12,7 @@ from typing import Dict, Any, List, Optional
 from .openrouter import query_model
 
 # Use a fast, cheap model for triage
-TRIAGE_MODEL = "google/gemini-2.5-flash"
+TRIAGE_MODEL = "google/gemini-2.0-flash-001"
 
 TRIAGE_PROMPT = """You are a triage assistant for an AI Council that advises a bootstrapped startup.
 
