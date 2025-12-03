@@ -50,8 +50,14 @@ async def query_model(
                 'reasoning_details': message.get('reasoning_details')
             }
 
+    except httpx.TimeoutException as e:
+        print(f"[TIMEOUT] Model {model}: Request timed out after {timeout}s", flush=True)
+        return None
+    except httpx.HTTPStatusError as e:
+        print(f"[HTTP ERROR] Model {model}: Status {e.response.status_code} - {e.response.text[:200]}", flush=True)
+        return None
     except Exception as e:
-        print(f"Error querying model {model}: {e}")
+        print(f"[ERROR] Model {model}: {type(e).__name__}: {e}", flush=True)
         return None
 
 
@@ -107,8 +113,15 @@ async def query_model_stream(
                         except json.JSONDecodeError:
                             continue
 
+    except httpx.TimeoutException as e:
+        print(f"[TIMEOUT] Model {model}: Streaming timed out after {timeout}s", flush=True)
+        yield f"[Error: Timeout after {timeout}s]"
+    except httpx.HTTPStatusError as e:
+        error_msg = f"Status {e.response.status_code}"
+        print(f"[HTTP ERROR] Model {model}: {error_msg} - {e.response.text[:200]}", flush=True)
+        yield f"[Error: {error_msg}]"
     except Exception as e:
-        print(f"Error streaming from model {model}: {e}")
+        print(f"[ERROR] Model {model}: {type(e).__name__}: {e}", flush=True)
         yield f"[Error: {str(e)}]"
 
 
