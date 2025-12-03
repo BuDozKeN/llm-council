@@ -9,9 +9,10 @@ load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 # Council members - list of OpenRouter model identifiers
+# Note: Gemini placed first to avoid potential issues with concurrent streams
 COUNCIL_MODELS = [
-    "openai/gpt-5.1",
     "google/gemini-3-pro-preview",
+    "openai/gpt-5.1",
     "anthropic/claude-opus-4.5",
     "x-ai/grok-4",
     "deepseek/deepseek-chat-v3-0324",
