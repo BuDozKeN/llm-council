@@ -102,7 +102,7 @@ async def stage1_stream_responses(
     tasks = []
     for i, model in enumerate(COUNCIL_MODELS):
         if i > 0:
-            await asyncio.sleep(1.0)  # 1 second delay between each model
+            await asyncio.sleep(2.0)  # 2 second delay between each model
         tasks.append(asyncio.create_task(stream_single_model(model)))
 
     # Track how many models have completed
@@ -235,7 +235,7 @@ Now provide your evaluation and ranking:"""
     tasks = []
     for i, model in enumerate(COUNCIL_MODELS):
         if i > 0:
-            await asyncio.sleep(1.0)  # 1 second delay between each model
+            await asyncio.sleep(2.0)  # 2 second delay between each model
         tasks.append(asyncio.create_task(stream_single_model(model)))
 
     # Track how many models have completed
