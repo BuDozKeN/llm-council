@@ -98,8 +98,12 @@ async def stage1_stream_responses(
             print(f"Error streaming from {model}: {e}")
             await queue.put({"type": "stage1_model_error", "model": model, "error": str(e)})
 
-    # Start all model streams concurrently
-    tasks = [asyncio.create_task(stream_single_model(model)) for model in COUNCIL_MODELS]
+    # Start all model streams with staggered delays to avoid rate limiting
+    tasks = []
+    for i, model in enumerate(COUNCIL_MODELS):
+        if i > 0:
+            await asyncio.sleep(0.3)  # 300ms delay between each model
+        tasks.append(asyncio.create_task(stream_single_model(model)))
 
     # Track how many models have completed
     completed_count = 0
@@ -227,8 +231,12 @@ Now provide your evaluation and ranking:"""
             print(f"Error streaming stage2 from {model}: {e}")
             await queue.put({"type": "stage2_model_error", "model": model, "error": str(e)})
 
-    # Start all model streams concurrently
-    tasks = [asyncio.create_task(stream_single_model(model)) for model in COUNCIL_MODELS]
+    # Start all model streams with staggered delays to avoid rate limiting
+    tasks = []
+    for i, model in enumerate(COUNCIL_MODELS):
+        if i > 0:
+            await asyncio.sleep(0.3)  # 300ms delay between each model
+        tasks.append(asyncio.create_task(stream_single_model(model)))
 
     # Track how many models have completed
     completed_count = 0
