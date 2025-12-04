@@ -206,3 +206,56 @@ def delete_conversation(conversation_id: str) -> bool:
 
     os.remove(path)
     return True
+
+
+def save_curator_run(
+    conversation_id: str,
+    business_id: str,
+    suggestions_count: int,
+    accepted_count: int,
+    rejected_count: int
+):
+    """
+    Record that the curator was run on this conversation.
+
+    Args:
+        conversation_id: Conversation identifier
+        business_id: Business context that was analyzed
+        suggestions_count: Total suggestions generated
+        accepted_count: Number of suggestions accepted
+        rejected_count: Number of suggestions rejected
+    """
+    conversation = get_conversation(conversation_id)
+    if conversation is None:
+        raise ValueError(f"Conversation {conversation_id} not found")
+
+    # Store curator history
+    if "curator_history" not in conversation:
+        conversation["curator_history"] = []
+
+    conversation["curator_history"].append({
+        "analyzed_at": datetime.utcnow().isoformat(),
+        "business_id": business_id,
+        "suggestions_count": suggestions_count,
+        "accepted_count": accepted_count,
+        "rejected_count": rejected_count
+    })
+
+    save_conversation(conversation)
+
+
+def get_curator_history(conversation_id: str) -> Optional[List[Dict[str, Any]]]:
+    """
+    Get curator run history for a conversation.
+
+    Args:
+        conversation_id: Conversation identifier
+
+    Returns:
+        List of curator run records or None if conversation not found
+    """
+    conversation = get_conversation(conversation_id)
+    if conversation is None:
+        return None
+
+    return conversation.get("curator_history", [])

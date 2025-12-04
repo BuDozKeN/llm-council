@@ -1,6 +1,6 @@
 # AxCouncil - Business Context
 
-> **Last Updated:** 2025-12-04
+> **Last Updated:** 2025-12-05
 > **Version:** 1.0
 
 ---
@@ -106,12 +106,17 @@ Build virtual companies with AI departments and roles. Users assemble their own 
 - Working from forked GitHub repo (LLM Council) from former OpenAI employee
 
 ### 3.4 Constraints
-| Constraint | Detail |
-|------------|--------|
-| Time | AxCouncil used to run existing businesses; development happens opportunistically |
-| Budget | Minimal additional spend; using existing tech stack from current company |
-| Risk Tolerance | Low financial risk; primary investment is time |
-| Gaps | None stated — doing everything solo |
+3.4 Constraints
+
+**Time** - AxCouncil used to run existing businesses; development happens opportunistically
+
+**Budget** - Minimal additional spend; using existing tech stack from current company
+
+**Risk Tolerance** - Low financial risk; primary investment is time
+
+**Gaps** - DevOps/deployment experience identified as skill gap; mitigated by using CTO Council for step-by-step guidance
+
+**No Human Hires** - Human employees or contractors ruled out at current stage; AI departments handle all execution guidance
 
 ### 3.5 Hard Boundaries
 - **No outreach calls** — will not do phone-based sales
@@ -391,3 +396,79 @@ If it works for our own company — running marketing campaigns, writing LinkedI
 ---
 
 *Document maintained by AxCouncil. For updates, add information to the relevant numbered section.*
+
+10.7 AI Departments Strategy
+
+Status: Decided (2025-12-04)
+
+Decision - Build virtual AI departments within AxCouncil rather than hiring human staff. The founder will use AxCouncil itself to create internal departments that provide execution-level guidance.
+
+Key Distinction
+
+Advisory Council - Provides high-level strategy and business decisions (e.g., "You should deploy to a live URL this week")
+
+Department Council (CTO) - Writes code, creates configs, provides step-by-step technical execution with commands to copy-paste
+
+Department Council (CMO) - Writes copy, runs campaigns, creates ready-to-use marketing assets
+
+Rationale
+• Maintains solo founder constraints (no payroll, no management overhead)
+• Zero additional cost beyond existing API usage, hosting and tech yet to be provided or described.
+• Proves product value through dogfooding
+• Creates first case study for AxCouncil
+
+2.8 Internal AI Departments (Dogfooding)
+
+Status: Active
+
+Purpose - Use AxCouncil to build AxCouncil by creating internal AI departments for the founder's own use
+
+CTO Council Setup
+
+Models - 5 models via OpenRouter (Claude, GPT, Gemini, Grok, DeepSeek) - We have the option to include more via OpenRouter if needed.
+
+Framework Prompt - "Bootstrap Technical Guide" - assumes basic Python/GitHub skills, no DevOps experience; provides step-by-step instructions with exact commands and code to copy-paste
+
+Query Format - Include skill level, what you know, request exact steps, commands, and error handling
+
+CMO Council Setup
+
+Models - Same 5 models
+
+Framework Prompt - "Solo Founder Outreach" - generates ready-to-use marketing assets (not strategy documents)
+
+Escalation Path - If the task takes more than 4-6 hours, CTO Council writes an Upwork freelancer brief instead (this is to be discussed first).
+
+13.4 Execution Guidance Standard
+
+Status: Decided (2025-12-04)
+
+**Problem Identified** - Advisory that says "do X" without showing exactly how is not useful for this founder
+
+**Required Standard** - All Council advice must include:
+• Step-by-step instructions assuming no prior knowledge
+• Exact commands or code to copy-paste
+• Error troubleshooting for common issues
+• Freelancer brief if task would take more than 4 hours
+
+**Two Paths for Every Technical Task**
+
+**Path A (DIY)** - Detailed step-by-step guide with commands and code snippets
+
+**Path B (Freelancer)** - Ready-to-post Upwork job description with deliverables and budget
+
+**Query Escalation** - If response feels too vague, reply with: "Break this down further—assume I'm a complete beginner and show me exactly what to type"
+
+## 12. Decision Log
+
+12. Decision Log
+
+**2025-12-04: AI Departments vs Human Hires**
+
+**Decision** - Build virtual AI departments within AxCouncil rather than hiring human staff at any stage before €3-5K MRR
+
+**Context** - Founder clarified that advisory telling them to "do X" without execution guidance is not useful; the distinction between advisory councils (strategy) and department councils (execution) was established
+
+**Rationale** - Maintains bootstrap constraints, proves product through dogfooding, zero additional cost
+
+**Outcome** - Create CTO Council and CMO Council as internal departments using specific framework prompts

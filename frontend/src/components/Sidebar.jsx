@@ -20,7 +20,9 @@ export default function Sidebar({
   const [deleteConfirm, setDeleteConfirm] = useState(null); // conversation id to confirm delete
   const [editingId, setEditingId] = useState(null); // conversation id being renamed
   const [editingTitle, setEditingTitle] = useState(''); // current edit value
+  const [menuOpenId, setMenuOpenId] = useState(null); // conversation id with open menu
   const editInputRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Focus the input when editing starts
   useEffect(() => {
@@ -30,8 +32,25 @@ export default function Sidebar({
     }
   }, [editingId]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuOpenId && menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpenId]);
+
+  const toggleMenu = (convId, e) => {
+    e.stopPropagation();
+    setMenuOpenId(menuOpenId === convId ? null : convId);
+  };
+
   const handleStartEdit = (conv, e) => {
     e.stopPropagation();
+    setMenuOpenId(null);
     setEditingId(conv.id);
     setEditingTitle(conv.title || 'New Conversation');
   };
@@ -229,46 +248,57 @@ export default function Sidebar({
                             {conv.message_count} messages
                           </div>
                         </div>
-                        <div className="conversation-actions">
+                        <div className="conversation-menu-container" ref={menuOpenId === conv.id ? menuRef : null}>
                           <button
-                            className="action-btn edit-btn"
-                            onClick={(e) => handleStartEdit(conv, e)}
-                            title="Rename"
+                            className="menu-trigger"
+                            onClick={(e) => toggleMenu(conv.id, e)}
+                            title="Options"
                           >
-                            ✎
+                            ⋮
                           </button>
-                          {conv.message_count > 0 && (
-                            <button
-                              className="action-btn export-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                api.exportConversation(conv.id);
-                              }}
-                              title="Export to Markdown"
-                            >
-                              ↓
-                            </button>
+                          {menuOpenId === conv.id && (
+                            <div className="conversation-dropdown">
+                              <button
+                                className="dropdown-item"
+                                onClick={(e) => handleStartEdit(conv, e)}
+                              >
+                                <span className="dropdown-icon">✎</span> Rename
+                              </button>
+                              {conv.message_count > 0 && (
+                                <button
+                                  className="dropdown-item"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMenuOpenId(null);
+                                    api.exportConversation(conv.id);
+                                  }}
+                                >
+                                  <span className="dropdown-icon">↓</span> Export
+                                </button>
+                              )}
+                              <button
+                                className="dropdown-item"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpenId(null);
+                                  onArchiveConversation(conv.id, !conv.archived);
+                                }}
+                              >
+                                <span className="dropdown-icon">{conv.archived ? '↑' : '📁'}</span>
+                                {conv.archived ? 'Unarchive' : 'Archive'}
+                              </button>
+                              <button
+                                className="dropdown-item dropdown-item-danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMenuOpenId(null);
+                                  setDeleteConfirm(conv.id);
+                                }}
+                              >
+                                <span className="dropdown-icon">×</span> Delete
+                              </button>
+                            </div>
                           )}
-                          <button
-                            className={`action-btn archive-btn ${conv.archived ? 'unarchive' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onArchiveConversation(conv.id, !conv.archived);
-                            }}
-                            title={conv.archived ? 'Unarchive' : 'Archive'}
-                          >
-                            {conv.archived ? '↑' : '📁'}
-                          </button>
-                          <button
-                            className="action-btn delete-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirm(conv.id);
-                            }}
-                            title="Delete"
-                          >
-                            ×
-                          </button>
                         </div>
                       </div>
                     ))}

@@ -8,7 +8,12 @@
       "Bash(curl:*)",
       "Bash(python -m json.tool:*)",
       "Bash(git stash:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 13508 -Force\")",
+      "Bash(python -m uvicorn:*)",
+      "Bash(if exist \"node_modules\\.vite\" rmdir /s /q \"node_modules\\.vite\")",
+      "Bash(netstat:*)",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

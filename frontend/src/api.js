@@ -325,4 +325,131 @@ export const api = {
     }
     return response.json();
   },
+
+  /**
+   * Analyze a conversation for potential knowledge base updates.
+   * @param {string} conversationId - The conversation ID
+   * @param {string} businessId - The business context ID
+   * @param {string|null} departmentId - Optional department ID
+   * @returns {Promise<{suggestions: Array, summary: string, analyzed_at: string}>}
+   */
+  async curateConversation(conversationId, businessId, departmentId = null) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/curate`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          department_id: departmentId,
+        }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to analyze conversation');
+    }
+    return response.json();
+  },
+
+  /**
+   * Apply a suggestion to update the business context.
+   * @param {string} businessId - The business context ID
+   * @param {object} suggestion - The suggestion object to apply
+   * @returns {Promise<{success: boolean, message: string, updated_at: string}>}
+   */
+  async applySuggestion(businessId, suggestion) {
+    const response = await fetch(`${API_BASE}/api/context/apply-suggestion`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        business_id: businessId,
+        suggestion: suggestion,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to apply suggestion');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get a specific section from the business context.
+   * @param {string} businessId - The business context ID
+   * @param {string} sectionName - The section name to retrieve
+   * @returns {Promise<{section: string, content: string}>}
+   */
+  async getContextSection(businessId, sectionName) {
+    const response = await fetch(
+      `${API_BASE}/api/context/${businessId}/section/${encodeURIComponent(sectionName)}`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to get context section');
+    }
+    return response.json();
+  },
+
+  /**
+   * Save a record that the curator was run on this conversation.
+   * @param {string} conversationId - The conversation ID
+   * @param {string} businessId - The business context ID
+   * @param {number} suggestionsCount - Total suggestions generated
+   * @param {number} acceptedCount - Number of suggestions accepted
+   * @param {number} rejectedCount - Number of suggestions rejected
+   * @returns {Promise<{success: boolean}>}
+   */
+  async saveCuratorRun(conversationId, businessId, suggestionsCount, acceptedCount, rejectedCount) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/curator-history`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          business_id: businessId,
+          suggestions_count: suggestionsCount,
+          accepted_count: acceptedCount,
+          rejected_count: rejectedCount,
+        }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to save curator run');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get curator run history for a conversation.
+   * @param {string} conversationId - The conversation ID
+   * @returns {Promise<{history: Array}>}
+   */
+  async getCuratorHistory(conversationId) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/curator-history`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to get curator history');
+    }
+    return response.json();
+  },
+
+  /**
+   * Get the last updated date from a business context file.
+   * @param {string} businessId - The business context ID
+   * @returns {Promise<{last_updated: string|null}>}
+   */
+  async getContextLastUpdated(businessId) {
+    const response = await fetch(
+      `${API_BASE}/api/context/${businessId}/last-updated`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to get context last updated');
+    }
+    return response.json();
+  },
 };

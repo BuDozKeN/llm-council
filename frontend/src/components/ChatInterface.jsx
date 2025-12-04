@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
 import Triage from './Triage';
+import CuratorPanel from './CuratorPanel';
 import './ChatInterface.css';
 
 export default function ChatInterface({
@@ -36,6 +37,7 @@ export default function ChatInterface({
   onTriageProceed,
 }) {
   const [input, setInput] = useState('');
+  const [showCurator, setShowCurator] = useState(null); // messageIndex of active curator or null
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const userHasScrolledUp = useRef(false);
@@ -164,6 +166,30 @@ export default function ChatInterface({
                       isLoading={msg.loading?.stage3}
                     />
                   )}
+
+                  {/* Curator Panel - show after Stage 3 is complete, only for last message, and only if business context is enabled */}
+                  {index === conversation.messages.length - 1 &&
+                    msg.stage3 &&
+                    !msg.loading?.stage3 &&
+                    selectedBusiness &&
+                    useContext &&
+                    !isLoading && (
+                      showCurator === index ? (
+                        <CuratorPanel
+                          conversationId={conversation.id}
+                          businessId={selectedBusiness}
+                          departmentId={selectedDepartment}
+                          onClose={() => setShowCurator(null)}
+                        />
+                      ) : (
+                        <button
+                          className="curator-trigger-btn"
+                          onClick={() => setShowCurator(index)}
+                        >
+                          Save insights to knowledge base
+                        </button>
+                      )
+                    )}
                 </div>
               )}
             </div>

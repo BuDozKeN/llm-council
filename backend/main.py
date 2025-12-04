@@ -14,6 +14,7 @@ from .council import run_full_council, generate_conversation_title, stage1_colle
 from .context_loader import list_available_businesses, load_business_context
 from . import leaderboard
 from . import triage
+from . import curator
 
 app = FastAPI(title="LLM Council API")
 
@@ -461,6 +462,125 @@ async def export_conversation_markdown(conversation_id: str):
             "Content-Disposition": f'attachment; filename="{filename}"'
         }
     )
+
+
+# Curator endpoints
+class CurateRequest(BaseModel):
+    """Request to analyze a conversation for knowledge updates."""
+    business_id: str
+    department_id: Optional[str] = None
+
+
+class ApplySuggestionRequest(BaseModel):
+    """Request to apply a curator suggestion."""
+    business_id: str
+    suggestion: Dict[str, Any]
+
+
+@app.post("/api/conversations/{conversation_id}/curate")
+async def curate_conversation(conversation_id: str, request: CurateRequest):
+    """
+    Analyze a conversation and suggest updates to the business context.
+    Returns a list of suggestions with section info, current text, and proposed updates.
+    """
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    result = await curator.analyze_conversation_for_updates(
+        conversation=conversation,
+        business_id=request.business_id,
+        department_id=request.department_id
+    )
+
+    return result
+
+
+@app.post("/api/context/apply-suggestion")
+async def apply_context_suggestion(request: ApplySuggestionRequest):
+    """
+    Apply an accepted suggestion to the business context file.
+    Updates the specified section and refreshes the 'Last Updated' date.
+    """
+    result = curator.apply_suggestion(
+        business_id=request.business_id,
+        suggestion=request.suggestion
+    )
+
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('message', 'Failed to apply suggestion'))
+
+    return result
+
+
+@app.get("/api/context/{business_id}/section/{section_name}")
+async def get_context_section(business_id: str, section_name: str):
+    """Get the full content of a specific section in the business context."""
+    content = curator.get_section_content(business_id, section_name)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Section not found")
+    return {"section": section_name, "content": content}
+
+
+class SaveCuratorRunRequest(BaseModel):
+    """Request to record a curator run."""
+    business_id: str
+    suggestions_count: int
+    accepted_count: int
+    rejected_count: int
+
+
+@app.post("/api/conversations/{conversation_id}/curator-history")
+async def save_curator_run(conversation_id: str, request: SaveCuratorRunRequest):
+    """
+    Record that the curator was run on this conversation.
+    Stores when it was run and the results.
+    """
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    storage.save_curator_run(
+        conversation_id=conversation_id,
+        business_id=request.business_id,
+        suggestions_count=request.suggestions_count,
+        accepted_count=request.accepted_count,
+        rejected_count=request.rejected_count
+    )
+
+    return {"success": True}
+
+
+@app.get("/api/conversations/{conversation_id}/curator-history")
+async def get_curator_history(conversation_id: str):
+    """
+    Get curator run history for a conversation.
+    Returns list of previous curator runs with timestamps and results.
+    """
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    history = storage.get_curator_history(conversation_id)
+    return {"history": history or []}
+
+
+@app.get("/api/context/{business_id}/last-updated")
+async def get_context_last_updated(business_id: str):
+    """
+    Get the last updated date from a business context file.
+    Used for smart curator history comparison.
+    """
+    content = curator.get_section_content(business_id, "")
+    if content is None:
+        # Try loading the full context
+        context_file = curator.CONTEXTS_DIR / business_id / "context.md"
+        if not context_file.exists():
+            raise HTTPException(status_code=404, detail="Business context not found")
+        content = context_file.read_text(encoding='utf-8')
+
+    last_updated = curator.extract_last_updated(content)
+    return {"last_updated": last_updated}
 
 
 if __name__ == "__main__":
