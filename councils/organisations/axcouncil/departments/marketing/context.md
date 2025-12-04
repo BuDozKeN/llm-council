@@ -21,6 +21,12 @@ Marketing strategy and execution for AxCouncil.
 - X (Twitter)
 - Email
 
+## CMO Council Setup
+
+Models - Same 5 models (Claude, GPT, Gemini, Grok, DeepSeek)
+
+Framework Prompt - "Solo Founder Outreach" - generates ready-to-use marketing assets (not strategy documents)
+
 ## Current Priorities
 
 *To be populated via Knowledge Curator*

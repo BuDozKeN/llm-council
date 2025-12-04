@@ -109,7 +109,111 @@
   background: #fafafa;
 }
 
-/* Selector Row - Department & Company side by side */
+/* Context Bar - Clean, minimal, single row */
+.context-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Unified select styling */
+.context-select {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 13px;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.context-select:hover {
+  border-color: #4a90e2;
+  background-color: #f8faff;
+}
+
+.context-select:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.15);
+}
+
+.context-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f5f5f5;
+}
+
+/* Company select - slightly more prominent */
+.company-select {
+  font-weight: 500;
+  min-width: 160px;
+}
+
+/* Department select */
+.department-select {
+  min-width: 180px;
+}
+
+/* Channel and Style selects */
+.channel-select,
+.style-select {
+  min-width: 120px;
+}
+
+/* Context Pill Button - Toggle ON/OFF */
+.context-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 20px;
+  background: #f5f5f5;
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.context-pill:hover {
+  border-color: #ccc;
+  background: #eee;
+}
+
+.context-pill.active {
+  border-color: #4a90e2;
+  background: linear-gradient(135deg, #e8f4fc 0%, #d4ecfa 100%);
+  color: #2c6faa;
+}
+
+.context-pill.active:hover {
+  background: linear-gradient(135deg, #d4ecfa 0%, #c0e4f8 100%);
+}
+
+.context-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pill-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.pill-text {
+  white-space: nowrap;
+}
+
+/* Legacy selector styles - keeping for backwards compatibility */
 .selector-row {
   display: flex;
   flex-wrap: wrap;

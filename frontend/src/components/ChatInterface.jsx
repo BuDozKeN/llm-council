@@ -25,9 +25,11 @@ export default function ChatInterface({
   styles = [],
   selectedStyle,
   onSelectStyle,
-  // Context toggle
-  useContext,
-  onToggleContext,
+  // Independent context toggles
+  useCompanyContext,
+  onToggleCompanyContext,
+  useDepartmentContext,
+  onToggleDepartmentContext,
   // Triage props
   triageState,
   originalQuestion,
@@ -172,7 +174,7 @@ export default function ChatInterface({
                     msg.stage3 &&
                     !msg.loading?.stage3 &&
                     selectedBusiness &&
-                    useContext &&
+                    (useCompanyContext || useDepartmentContext) &&
                     !isLoading && (
                       showCurator === index ? (
                         <CuratorPanel
@@ -215,107 +217,110 @@ export default function ChatInterface({
       {/* Only show input form when no triage is active */}
       {conversation.messages.length === 0 && !triageState && (
         <form className="input-form" onSubmit={handleSubmit}>
-          {/* Row 1: Company (primary) & Department (conditional) */}
-          <div className="selector-row">
-            {/* Company Selector - Always first */}
-            {businesses.length > 0 && (
-              <div className="selector-item">
-                <label htmlFor="business-select">Company:</label>
-                <select
-                  id="business-select"
-                  value={selectedBusiness || ''}
-                  onChange={(e) => onSelectBusiness(e.target.value || null)}
-                  disabled={isLoading}
-                >
-                  <option value="">(No Company)</option>
-                  {businesses.map((biz) => (
-                    <option key={biz.id} value={biz.id}>
-                      {biz.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+          {/* Clean context bar - minimal, intuitive */}
+          {businesses.length > 0 && (
+            <div className="context-bar">
+              {/* Company selector as subtle dropdown */}
+              <select
+                id="business-select"
+                value={selectedBusiness || ''}
+                onChange={(e) => onSelectBusiness(e.target.value || null)}
+                disabled={isLoading}
+                className="context-select company-select"
+              >
+                <option value="">No company</option>
+                {businesses.map((biz) => (
+                  <option key={biz.id} value={biz.id}>
+                    {biz.name}
+                  </option>
+                ))}
+              </select>
 
-            {/* Context Toggle - Only show when company is selected */}
-            {selectedBusiness && (
-              <div className="context-toggle">
-                <label className="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={useContext}
-                    onChange={(e) => onToggleContext(e.target.checked)}
+              {/* When company selected: show company context toggle and department options */}
+              {selectedBusiness && (
+                <>
+                  {/* Company Context toggle - independent */}
+                  <button
+                    type="button"
+                    className={`context-pill ${useCompanyContext ? 'active' : ''}`}
+                    onClick={() => onToggleCompanyContext(!useCompanyContext)}
                     disabled={isLoading}
-                  />
-                  <span className="toggle-slider"></span>
-                </label>
-                <span className={`toggle-label ${useContext ? 'active' : ''}`}>
-                  {useContext ? 'Using company context' : 'General advice'}
-                </span>
-              </div>
-            )}
-
-            {/* Department Selector - Only show if company has multiple departments */}
-            {departments.length > 1 && (
-              <div className="selector-item">
-                <label htmlFor="department-select">Department:</label>
-                <select
-                  id="department-select"
-                  value={selectedDepartment || ''}
-                  onChange={(e) => onSelectDepartment(e.target.value)}
-                  disabled={isLoading}
-                >
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Row 2: Channel (if department has channels) & Style (if company has styles) */}
-          {(channels.length > 0 || styles.length > 0) && (
-            <div className="selector-row">
-              {/* Channel - only visible when selected department has channels */}
-              {channels.length > 0 && (
-                <div className="selector-item">
-                  <label htmlFor="channel-select">Channel:</label>
-                  <select
-                    id="channel-select"
-                    value={selectedChannel || ''}
-                    onChange={(e) => onSelectChannel(e.target.value)}
-                    disabled={isLoading}
+                    title="Toggle company-wide context (main company knowledge)"
                   >
-                    <option value="">(No Channel)</option>
-                    {channels.map((channel) => (
-                      <option key={channel.id} value={channel.id}>
-                        {channel.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                    <span className="pill-icon">{useCompanyContext ? '✓' : '○'}</span>
+                    <span className="pill-text">Company</span>
+                  </button>
 
-              {/* Style Selector - only show if company has styles */}
-              {styles.length > 0 && (
-                <div className="selector-item">
-                  <label htmlFor="style-select">Style:</label>
-                  <select
-                    id="style-select"
-                    value={selectedStyle || ''}
-                    onChange={(e) => onSelectStyle(e.target.value)}
-                    disabled={isLoading}
-                  >
-                    <option value="">(No Style)</option>
-                    {styles.map((style) => (
-                      <option key={style.id} value={style.id}>
-                        {style.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Department selector - always show when company has departments */}
+                  {departments.length > 0 && (
+                    <>
+                      <select
+                        id="department-select"
+                        value={selectedDepartment || ''}
+                        onChange={(e) => onSelectDepartment(e.target.value || null)}
+                        disabled={isLoading}
+                        className="context-select department-select"
+                      >
+                        <option value="">General Council</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Department Context toggle - only when department is selected */}
+                      {selectedDepartment && (
+                        <button
+                          type="button"
+                          className={`context-pill ${useDepartmentContext ? 'active' : ''}`}
+                          onClick={() => onToggleDepartmentContext(!useDepartmentContext)}
+                          disabled={isLoading}
+                          title="Toggle department-specific context (department knowledge)"
+                        >
+                          <span className="pill-icon">{useDepartmentContext ? '✓' : '○'}</span>
+                          <span className="pill-text">Dept</span>
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  {/* Channel - only when department has channels */}
+                  {selectedDepartment && channels.length > 0 && (
+                    <select
+                      id="channel-select"
+                      value={selectedChannel || ''}
+                      onChange={(e) => onSelectChannel(e.target.value || null)}
+                      disabled={isLoading}
+                      className="context-select channel-select"
+                    >
+                      <option value="">Any channel</option>
+                      {channels.map((channel) => (
+                        <option key={channel.id} value={channel.id}>
+                          {channel.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {/* Style - only when company has styles */}
+                  {styles.length > 0 && (
+                    <select
+                      id="style-select"
+                      value={selectedStyle || ''}
+                      onChange={(e) => onSelectStyle(e.target.value || null)}
+                      disabled={isLoading}
+                      className="context-select style-select"
+                    >
+                      <option value="">Default style</option>
+                      {styles.map((style) => (
+                        <option key={style.id} value={style.id}>
+                          {style.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </>
               )}
             </div>
           )}

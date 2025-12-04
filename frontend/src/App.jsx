@@ -18,10 +18,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [businesses, setBusinesses] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('');
-  const [useContext, setUseContext] = useState(true); // Whether to use company context
+  const [selectedDepartment, setSelectedDepartment] = useState(null); // null = no department selected
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedStyle, setSelectedStyle] = useState(null);
+  const [useCompanyContext, setUseCompanyContext] = useState(true); // Whether to use company context
+  const [useDepartmentContext, setUseDepartmentContext] = useState(true); // Whether to use department context
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   // Triage state
   const [triageState, setTriageState] = useState(null); // null, 'analyzing', or triage result object
@@ -55,24 +56,17 @@ function App() {
     return currentBusiness.styles;
   }, [currentBusiness]);
 
-  // When business changes, reset department/channel/style
+  // When business changes, reset department/channel/style to defaults
   useEffect(() => {
-    // Get departments for this business
-    const business = businesses.find((b) => b.id === selectedBusiness);
-    const depts = business?.departments?.length > 0 ? business.departments : DEFAULT_DEPARTMENTS;
-
-    if (depts.length > 0) {
-      setSelectedDepartment(depts[0].id);
-    } else {
-      setSelectedDepartment('');
-    }
-    setSelectedChannel('');
-    setSelectedStyle('');
+    // Default to null (General/company-wide) - user can select specific department
+    setSelectedDepartment(null);
+    setSelectedChannel(null);
+    setSelectedStyle(null);
   }, [selectedBusiness, businesses]);
 
   // When department changes, reset channel
   useEffect(() => {
-    setSelectedChannel('');
+    setSelectedChannel(null);
   }, [selectedDepartment]);
 
   // Load conversations and businesses on mount
@@ -193,8 +187,8 @@ function App() {
     setIsTriageLoading(true);
     setTriageState('analyzing');
 
-    // Only pass businessId if useContext is enabled
-    const effectiveBusinessId = useContext ? selectedBusiness : null;
+    // Only pass businessId if useCompanyContext is enabled
+    const effectiveBusinessId = useCompanyContext ? selectedBusiness : null;
 
     try {
       const result = await api.analyzeTriage(content, effectiveBusinessId);
@@ -213,8 +207,8 @@ function App() {
 
     setIsTriageLoading(true);
 
-    // Only pass businessId if useContext is enabled
-    const effectiveBusinessId = useContext ? selectedBusiness : null;
+    // Only pass businessId if useCompanyContext is enabled
+    const effectiveBusinessId = useCompanyContext ? selectedBusiness : null;
 
     try {
       const result = await api.continueTriage(
@@ -314,9 +308,11 @@ function App() {
         messages: [...prev.messages, assistantMessage],
       }));
 
-      // Send message with streaming (with business context if enabled)
-      // If useContext is false, pass null for businessId so context is not loaded
-      const effectiveBusinessId = useContext ? selectedBusiness : null;
+      // Send message with streaming (with business/department context if enabled)
+      // If useCompanyContext is false, pass null for businessId
+      // If useDepartmentContext is false, pass null for department
+      const effectiveBusinessId = useCompanyContext ? selectedBusiness : null;
+      const effectiveDepartment = useDepartmentContext ? selectedDepartment : null;
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -593,7 +589,7 @@ function App() {
         }
       }, {
         businessId: effectiveBusinessId,
-        department: selectedDepartment,
+        department: effectiveDepartment,
         signal: abortControllerRef.current?.signal,
       });
     } catch (error) {
@@ -645,9 +641,11 @@ function App() {
         styles={availableStyles}
         selectedStyle={selectedStyle}
         onSelectStyle={setSelectedStyle}
-        // Context toggle
-        useContext={useContext}
-        onToggleContext={setUseContext}
+        // Independent context toggles
+        useCompanyContext={useCompanyContext}
+        onToggleCompanyContext={setUseCompanyContext}
+        useDepartmentContext={useDepartmentContext}
+        onToggleDepartmentContext={setUseDepartmentContext}
         // Triage props
         triageState={triageState}
         originalQuestion={originalQuery}
