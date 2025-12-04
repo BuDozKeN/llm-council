@@ -355,7 +355,8 @@ async def export_conversation_markdown(conversation_id: str):
             if stage3:
                 md_lines.append("## AI Council Answer")
                 md_lines.append("")
-                md_lines.append(stage3.get("content", ""))
+                # Support both "response" and "content" field names
+                md_lines.append(stage3.get("response") or stage3.get("content", ""))
                 md_lines.append("")
 
             # Stage 1 - Individual Responses (collapsible for reference)
@@ -366,12 +367,13 @@ async def export_conversation_markdown(conversation_id: str):
                 md_lines.append("<details>")
                 md_lines.append("<summary>Click to expand individual responses</summary>")
                 md_lines.append("")
-                for response in stage1:
-                    model_name = response.get("model", "Unknown Model")
-                    content = response.get("content", "")
+                for resp in stage1:
+                    model_name = resp.get("model", "Unknown Model")
+                    # Support both "response" and "content" field names
+                    resp_content = resp.get("response") or resp.get("content", "")
                     md_lines.append(f"#### {model_name}")
                     md_lines.append("")
-                    md_lines.append(content)
+                    md_lines.append(resp_content)
                     md_lines.append("")
                 md_lines.append("</details>")
                 md_lines.append("")
