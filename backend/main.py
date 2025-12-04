@@ -301,6 +301,49 @@ async def continue_triage_conversation(request: TriageContinueRequest):
     return result
 
 
+# Rename endpoint
+class RenameRequest(BaseModel):
+    """Request to rename a conversation."""
+    title: str
+
+
+@app.patch("/api/conversations/{conversation_id}/rename")
+async def rename_conversation(conversation_id: str, request: RenameRequest):
+    """Rename a conversation."""
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    storage.update_conversation_title(conversation_id, request.title)
+    return {"success": True, "title": request.title}
+
+
+# Archive/Delete endpoints
+class ArchiveRequest(BaseModel):
+    """Request to archive/unarchive a conversation."""
+    archived: bool = True
+
+
+@app.post("/api/conversations/{conversation_id}/archive")
+async def archive_conversation(conversation_id: str, request: ArchiveRequest):
+    """Archive or unarchive a conversation."""
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    storage.archive_conversation(conversation_id, request.archived)
+    return {"success": True, "archived": request.archived}
+
+
+@app.delete("/api/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Permanently delete a conversation."""
+    success = storage.delete_conversation(conversation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"success": True}
+
+
 # Leaderboard endpoints
 @app.get("/api/leaderboard")
 async def get_leaderboard_summary():

@@ -264,4 +264,65 @@ export const api = {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   },
+
+  /**
+   * Rename a conversation.
+   * @param {string} conversationId - The conversation ID
+   * @param {string} title - The new title
+   */
+  async renameConversation(conversationId, title) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/rename`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to rename conversation');
+    }
+    return response.json();
+  },
+
+  /**
+   * Archive or unarchive a conversation.
+   * @param {string} conversationId - The conversation ID
+   * @param {boolean} archived - True to archive, false to unarchive
+   */
+  async archiveConversation(conversationId, archived = true) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/archive`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archived }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to archive conversation');
+    }
+    return response.json();
+  },
+
+  /**
+   * Permanently delete a conversation.
+   * @param {string} conversationId - The conversation ID
+   */
+  async deleteConversation(conversationId) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to delete conversation');
+    }
+    return response.json();
+  },
 };

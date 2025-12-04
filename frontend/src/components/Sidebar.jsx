@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { api } from '../api';
 import './Sidebar.css';
 
@@ -9,17 +9,68 @@ export default function Sidebar({
   onNewConversation,
   onOpenLeaderboard,
   onExportConversation,
+  onArchiveConversation,
+  onDeleteConversation,
+  onRenameConversation,
   departments = [],
 }) {
   const [filter, setFilter] = useState('all');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [showAllInGroup, setShowAllInGroup] = useState({});
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // conversation id to confirm delete
+  const [editingId, setEditingId] = useState(null); // conversation id being renamed
+  const [editingTitle, setEditingTitle] = useState(''); // current edit value
+  const editInputRef = useRef(null);
+
+  // Focus the input when editing starts
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingId]);
+
+  const handleStartEdit = (conv, e) => {
+    e.stopPropagation();
+    setEditingId(conv.id);
+    setEditingTitle(conv.title || 'New Conversation');
+  };
+
+  const handleSaveEdit = async () => {
+    if (editingId && editingTitle.trim()) {
+      await onRenameConversation(editingId, editingTitle.trim());
+    }
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingTitle('');
+  };
+
+  const handleEditKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
 
   const MAX_VISIBLE = 5;
 
-  // Group conversations by department
+  // Separate active and archived conversations
+  const { activeConversations, archivedConversations } = useMemo(() => {
+    const active = conversations.filter(conv => !conv.archived);
+    const archived = conversations.filter(conv => conv.archived);
+    return { activeConversations: active, archivedConversations: archived };
+  }, [conversations]);
+
+  // Group conversations by department (only active ones, unless viewing archived)
   const groupedConversations = useMemo(() => {
     const groups = {};
+    const convsToGroup = filter === 'archived' ? archivedConversations : activeConversations;
 
     // Initialize groups for all departments
     departments.forEach(dept => {
@@ -35,7 +86,7 @@ export default function Sidebar({
     }
 
     // Sort conversations into groups
-    conversations.forEach(conv => {
+    convsToGroup.forEach(conv => {
       const dept = conv.department || 'standard';
       if (!groups[dept]) {
         groups[dept] = { name: dept.charAt(0).toUpperCase() + dept.slice(1), conversations: [] };
@@ -44,11 +95,11 @@ export default function Sidebar({
     });
 
     return groups;
-  }, [conversations, departments]);
+  }, [activeConversations, archivedConversations, departments, filter]);
 
   // Filter groups based on selected filter
   const filteredGroups = useMemo(() => {
-    if (filter === 'all') {
+    if (filter === 'all' || filter === 'archived') {
       return groupedConversations;
     }
     return { [filter]: groupedConversations[filter] };
@@ -100,12 +151,15 @@ export default function Sidebar({
             onChange={(e) => setFilter(e.target.value)}
             className="filter-select"
           >
-            <option value="all">All Conversations</option>
+            <option value="all">Active ({activeConversations.length})</option>
             {departments.map(dept => (
               <option key={dept.id} value={dept.id}>
                 {dept.name}
               </option>
             ))}
+            {archivedConversations.length > 0 && (
+              <option value="archived">Archived ({archivedConversations.length})</option>
+            )}
           </select>
         </div>
       )}
@@ -113,6 +167,10 @@ export default function Sidebar({
       <div className="conversation-list">
         {totalConversations === 0 ? (
           <div className="no-conversations">No conversations yet</div>
+        ) : filter === 'archived' && archivedConversations.length === 0 ? (
+          <div className="no-conversations">No archived conversations</div>
+        ) : filter !== 'archived' && activeConversations.length === 0 ? (
+          <div className="no-conversations">No active conversations</div>
         ) : (
           Object.entries(filteredGroups).map(([groupId, group]) => {
             if (!group || group.conversations.length === 0) return null;
@@ -144,29 +202,74 @@ export default function Sidebar({
                         key={conv.id}
                         className={`conversation-item ${
                           conv.id === currentConversationId ? 'active' : ''
-                        }`}
-                        onClick={() => onSelectConversation(conv.id)}
+                        } ${conv.archived ? 'archived' : ''}`}
+                        onClick={() => editingId !== conv.id && onSelectConversation(conv.id)}
                       >
                         <div className="conversation-content">
-                          <div className="conversation-title">
-                            {conv.title || 'New Conversation'}
-                          </div>
+                          {editingId === conv.id ? (
+                            <div className="conversation-title-edit">
+                              <input
+                                ref={editInputRef}
+                                type="text"
+                                value={editingTitle}
+                                onChange={(e) => setEditingTitle(e.target.value)}
+                                onKeyDown={handleEditKeyDown}
+                                onBlur={handleSaveEdit}
+                                onClick={(e) => e.stopPropagation()}
+                                className="title-edit-input"
+                              />
+                            </div>
+                          ) : (
+                            <div className="conversation-title">
+                              {conv.archived && <span className="archived-badge">Archived</span>}
+                              {conv.title || 'New Conversation'}
+                            </div>
+                          )}
                           <div className="conversation-meta">
                             {conv.message_count} messages
                           </div>
                         </div>
-                        {conv.message_count > 0 && (
+                        <div className="conversation-actions">
                           <button
-                            className="export-btn"
+                            className="action-btn edit-btn"
+                            onClick={(e) => handleStartEdit(conv, e)}
+                            title="Rename"
+                          >
+                            ✎
+                          </button>
+                          {conv.message_count > 0 && (
+                            <button
+                              className="action-btn export-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                api.exportConversation(conv.id);
+                              }}
+                              title="Export to Markdown"
+                            >
+                              ↓
+                            </button>
+                          )}
+                          <button
+                            className={`action-btn archive-btn ${conv.archived ? 'unarchive' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              api.exportConversation(conv.id);
+                              onArchiveConversation(conv.id, !conv.archived);
                             }}
-                            title="Export to Markdown"
+                            title={conv.archived ? 'Unarchive' : 'Archive'}
                           >
-                            ↓
+                            {conv.archived ? '↑' : '📁'}
                           </button>
-                        )}
+                          <button
+                            className="action-btn delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirm(conv.id);
+                            }}
+                            title="Delete"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
                     ))}
 
@@ -191,6 +294,35 @@ export default function Sidebar({
           })
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="delete-modal-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="delete-modal-header">Delete Conversation?</div>
+            <div className="delete-modal-body">
+              This action cannot be undone. The conversation will be permanently deleted.
+            </div>
+            <div className="delete-modal-actions">
+              <button
+                className="delete-modal-cancel"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="delete-modal-confirm"
+                onClick={() => {
+                  onDeleteConversation(deleteConfirm);
+                  setDeleteConfirm(null);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

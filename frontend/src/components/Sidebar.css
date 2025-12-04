@@ -267,3 +267,186 @@
 .conversation-list::-webkit-scrollbar-thumb:hover {
   background: #b0b0b0;
 }
+
+/* Conversation Actions */
+.conversation-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.conversation-item:hover .conversation-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn.edit-btn:hover {
+  background: #9c27b0;
+  border-color: #9c27b0;
+  color: #fff;
+}
+
+.action-btn.export-btn:hover {
+  background: #4a90e2;
+  border-color: #4a90e2;
+  color: #fff;
+}
+
+.action-btn.archive-btn:hover {
+  background: #ff9800;
+  border-color: #ff9800;
+  color: #fff;
+}
+
+.action-btn.archive-btn.unarchive:hover {
+  background: #4caf50;
+  border-color: #4caf50;
+  color: #fff;
+}
+
+.action-btn.delete-btn {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.action-btn.delete-btn:hover {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: #fff;
+}
+
+/* Archived conversation styling */
+.conversation-item.archived {
+  opacity: 0.6;
+}
+
+.conversation-item.archived .conversation-title {
+  color: #888;
+}
+
+.archived-badge {
+  display: inline-block;
+  font-size: 9px;
+  background: #ff9800;
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  text-transform: uppercase;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* Delete Confirmation Modal */
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.delete-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.delete-modal-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.delete-modal-body {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.delete-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.delete-modal-cancel {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.delete-modal-cancel:hover {
+  background: #e8e8e8;
+}
+
+.delete-modal-confirm {
+  padding: 10px 20px;
+  background: #e74c3c;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.delete-modal-confirm:hover {
+  background: #c0392b;
+}
+
+/* Title Edit Input */
+.conversation-title-edit {
+  flex: 1;
+  min-width: 0;
+}
+
+.title-edit-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #4a90e2;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  background: #fff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.title-edit-input:focus {
+  border-color: #357abd;
+}

@@ -136,6 +136,55 @@ function App() {
     setCurrentConversationId(id);
   };
 
+  const handleArchiveConversation = async (id, archived) => {
+    try {
+      await api.archiveConversation(id, archived);
+      // Update the conversations list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === id ? { ...conv, archived } : conv
+        )
+      );
+    } catch (error) {
+      console.error('Failed to archive conversation:', error);
+    }
+  };
+
+  const handleDeleteConversation = async (id) => {
+    try {
+      await api.deleteConversation(id);
+      // Remove from conversations list
+      setConversations((prev) => prev.filter((conv) => conv.id !== id));
+      // If we deleted the current conversation, clear the selection
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setCurrentConversation(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+    }
+  };
+
+  const handleRenameConversation = async (id, title) => {
+    try {
+      await api.renameConversation(id, title);
+      // Update the conversations list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === id ? { ...conv, title } : conv
+        )
+      );
+      // Also update current conversation if it's the one being renamed
+      if (currentConversationId === id) {
+        setCurrentConversation((prev) =>
+          prev ? { ...prev, title } : prev
+        );
+      }
+    } catch (error) {
+      console.error('Failed to rename conversation:', error);
+    }
+  };
+
   // Triage handlers
   const handleStartTriage = async (content) => {
     if (!currentConversationId) return;
@@ -574,6 +623,9 @@ function App() {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
+        onArchiveConversation={handleArchiveConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onRenameConversation={handleRenameConversation}
         departments={availableDepartments}
       />
       <ChatInterface
