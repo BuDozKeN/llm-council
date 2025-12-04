@@ -117,8 +117,19 @@ async def query_model_stream(
                             if not first_data_logged:
                                 print(f"[STREAM FIRST DATA] {model}: {json.dumps(data)[:500]}", flush=True)
                                 first_data_logged = True
+
+                            # Check for error response
+                            if 'error' in data:
+                                error_msg = data['error'].get('message', 'Unknown error')
+                                print(f"[STREAM ERROR RESPONSE] {model}: {error_msg}", flush=True)
+                                yield f"[Error: {error_msg}]"
+                                break
+
                             delta = data.get('choices', [{}])[0].get('delta', {})
+                            # Check both 'content' and 'reasoning' fields (Gemini uses 'reasoning')
                             content = delta.get('content', '')
+                            if not content:
+                                content = delta.get('reasoning', '')
                             if content:
                                 token_count += 1
                                 yield content
