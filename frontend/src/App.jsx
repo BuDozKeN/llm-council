@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import Leaderboard from './components/Leaderboard';
@@ -6,27 +6,9 @@ import Triage from './components/Triage';
 import { api } from './api';
 import './App.css';
 
-// Available departments for the council
-const DEPARTMENTS = [
+// Default departments when no company is selected or company has no departments
+const DEFAULT_DEPARTMENTS = [
   { id: 'standard', name: 'Standard', description: 'General advisory council' },
-  { id: 'marketing', name: 'Marketing', description: 'Marketing expertise' },
-  { id: 'sales', name: 'Sales', description: 'Sales expertise' },
-  { id: 'legal', name: 'Legal', description: 'Legal expertise' },
-  { id: 'executive', name: 'Executive', description: 'Strategic advisory' },
-];
-
-// Available channels (shown when Marketing department is selected)
-const CHANNELS = [
-  { id: '', name: '(No Channel)', department: null },
-  { id: 'linkedin', name: 'LinkedIn', department: 'marketing' },
-  { id: 'x', name: 'X (Twitter)', department: 'marketing' },
-  { id: 'email', name: 'Email', department: 'marketing' },
-];
-
-// Available writing styles
-const STYLES = [
-  { id: '', name: '(No Style)' },
-  { id: 'ann-friedman', name: 'Ann Friedman' },
 ];
 
 function App() {
@@ -36,15 +18,62 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [businesses, setBusinesses] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState('standard');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
+  const [useContext, setUseContext] = useState(true); // Whether to use company context
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
   // Triage state
   const [triageState, setTriageState] = useState(null); // null, 'analyzing', or triage result object
   const [originalQuery, setOriginalQuery] = useState('');
   const [isTriageLoading, setIsTriageLoading] = useState(false);
   const abortControllerRef = useRef(null);
+
+  // Get the currently selected business object
+  const currentBusiness = useMemo(() => {
+    return businesses.find((b) => b.id === selectedBusiness) || null;
+  }, [businesses, selectedBusiness]);
+
+  // Get departments for the selected company
+  const availableDepartments = useMemo(() => {
+    if (!currentBusiness || !currentBusiness.departments || currentBusiness.departments.length === 0) {
+      return DEFAULT_DEPARTMENTS;
+    }
+    return currentBusiness.departments;
+  }, [currentBusiness]);
+
+  // Get channels for the selected department (if any)
+  const availableChannels = useMemo(() => {
+    if (!selectedDepartment || !availableDepartments) return [];
+    const dept = availableDepartments.find((d) => d.id === selectedDepartment);
+    return dept?.channels || [];
+  }, [availableDepartments, selectedDepartment]);
+
+  // Get styles for the selected company
+  const availableStyles = useMemo(() => {
+    if (!currentBusiness || !currentBusiness.styles) return [];
+    return currentBusiness.styles;
+  }, [currentBusiness]);
+
+  // When business changes, reset department/channel/style
+  useEffect(() => {
+    // Get departments for this business
+    const business = businesses.find((b) => b.id === selectedBusiness);
+    const depts = business?.departments?.length > 0 ? business.departments : DEFAULT_DEPARTMENTS;
+
+    if (depts.length > 0) {
+      setSelectedDepartment(depts[0].id);
+    } else {
+      setSelectedDepartment('');
+    }
+    setSelectedChannel('');
+    setSelectedStyle('');
+  }, [selectedBusiness, businesses]);
+
+  // When department changes, reset channel
+  useEffect(() => {
+    setSelectedChannel('');
+  }, [selectedDepartment]);
 
   // Load conversations and businesses on mount
   useEffect(() => {
@@ -115,8 +144,11 @@ function App() {
     setIsTriageLoading(true);
     setTriageState('analyzing');
 
+    // Only pass businessId if useContext is enabled
+    const effectiveBusinessId = useContext ? selectedBusiness : null;
+
     try {
-      const result = await api.analyzeTriage(content, selectedBusiness);
+      const result = await api.analyzeTriage(content, effectiveBusinessId);
       setTriageState(result);
     } catch (error) {
       console.error('Triage analysis failed:', error);
@@ -132,12 +164,15 @@ function App() {
 
     setIsTriageLoading(true);
 
+    // Only pass businessId if useContext is enabled
+    const effectiveBusinessId = useContext ? selectedBusiness : null;
+
     try {
       const result = await api.continueTriage(
         originalQuery,
         triageState.constraints || {},
         response,
-        selectedBusiness
+        effectiveBusinessId
       );
       setTriageState(result);
     } catch (error) {
@@ -230,7 +265,9 @@ function App() {
         messages: [...prev.messages, assistantMessage],
       }));
 
-      // Send message with streaming (with business context)
+      // Send message with streaming (with business context if enabled)
+      // If useContext is false, pass null for businessId so context is not loaded
+      const effectiveBusinessId = useContext ? selectedBusiness : null;
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -506,7 +543,7 @@ function App() {
             console.log('Unknown event type:', eventType);
         }
       }, {
-        businessId: selectedBusiness,
+        businessId: effectiveBusinessId,
         department: selectedDepartment,
         signal: abortControllerRef.current?.signal,
       });
@@ -537,7 +574,7 @@ function App() {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
         onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
-        departments={DEPARTMENTS}
+        departments={availableDepartments}
       />
       <ChatInterface
         conversation={currentConversation}
@@ -547,21 +584,18 @@ function App() {
         businesses={businesses}
         selectedBusiness={selectedBusiness}
         onSelectBusiness={setSelectedBusiness}
-        departments={DEPARTMENTS}
+        departments={availableDepartments}
         selectedDepartment={selectedDepartment}
-        onSelectDepartment={(dept) => {
-          setSelectedDepartment(dept);
-          // Clear channel when switching away from marketing
-          if (dept !== 'marketing') {
-            setSelectedChannel('');
-          }
-        }}
-        channels={CHANNELS}
+        onSelectDepartment={setSelectedDepartment}
+        channels={availableChannels}
         selectedChannel={selectedChannel}
         onSelectChannel={setSelectedChannel}
-        styles={STYLES}
+        styles={availableStyles}
         selectedStyle={selectedStyle}
         onSelectStyle={setSelectedStyle}
+        // Context toggle
+        useContext={useContext}
+        onToggleContext={setUseContext}
         // Triage props
         triageState={triageState}
         originalQuestion={originalQuery}

@@ -24,6 +24,9 @@ export default function ChatInterface({
   styles = [],
   selectedStyle,
   onSelectStyle,
+  // Context toggle
+  useContext,
+  onToggleContext,
   // Triage props
   triageState,
   originalQuestion,
@@ -186,25 +189,9 @@ export default function ChatInterface({
       {/* Only show input form when no triage is active */}
       {conversation.messages.length === 0 && !triageState && (
         <form className="input-form" onSubmit={handleSubmit}>
-          {/* Row 1: Department & Company */}
+          {/* Row 1: Company (primary) & Department (conditional) */}
           <div className="selector-row">
-            <div className="selector-item">
-              <label htmlFor="department-select">Department:</label>
-              <select
-                id="department-select"
-                value={selectedDepartment || 'standard'}
-                onChange={(e) => onSelectDepartment(e.target.value)}
-                disabled={isLoading}
-              >
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Company Selector */}
+            {/* Company Selector - Always first */}
             {businesses.length > 0 && (
               <div className="selector-item">
                 <label htmlFor="business-select">Company:</label>
@@ -214,7 +201,7 @@ export default function ChatInterface({
                   onChange={(e) => onSelectBusiness(e.target.value || null)}
                   disabled={isLoading}
                 >
-                  <option value="">(No Context)</option>
+                  <option value="">(No Company)</option>
                   {businesses.map((biz) => (
                     <option key={biz.id} value={biz.id}>
                       {biz.name}
@@ -223,48 +210,89 @@ export default function ChatInterface({
                 </select>
               </div>
             )}
-          </div>
 
-          {/* Row 2: Channel (only for Marketing) & Style */}
-          <div className="selector-row">
-            {/* Channel - only visible when Marketing department selected */}
-            {selectedDepartment === 'marketing' && (
+            {/* Context Toggle - Only show when company is selected */}
+            {selectedBusiness && (
+              <div className="context-toggle">
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={useContext}
+                    onChange={(e) => onToggleContext(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <span className="toggle-slider"></span>
+                </label>
+                <span className={`toggle-label ${useContext ? 'active' : ''}`}>
+                  {useContext ? 'Using company context' : 'General advice'}
+                </span>
+              </div>
+            )}
+
+            {/* Department Selector - Only show if company has multiple departments */}
+            {departments.length > 1 && (
               <div className="selector-item">
-                <label htmlFor="channel-select">Channel:</label>
+                <label htmlFor="department-select">Department:</label>
                 <select
-                  id="channel-select"
-                  value={selectedChannel || ''}
-                  onChange={(e) => onSelectChannel(e.target.value)}
+                  id="department-select"
+                  value={selectedDepartment || ''}
+                  onChange={(e) => onSelectDepartment(e.target.value)}
                   disabled={isLoading}
                 >
-                  {channels
-                    .filter((ch) => !ch.department || ch.department === 'marketing')
-                    .map((channel) => (
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Row 2: Channel (if department has channels) & Style (if company has styles) */}
+          {(channels.length > 0 || styles.length > 0) && (
+            <div className="selector-row">
+              {/* Channel - only visible when selected department has channels */}
+              {channels.length > 0 && (
+                <div className="selector-item">
+                  <label htmlFor="channel-select">Channel:</label>
+                  <select
+                    id="channel-select"
+                    value={selectedChannel || ''}
+                    onChange={(e) => onSelectChannel(e.target.value)}
+                    disabled={isLoading}
+                  >
+                    <option value="">(No Channel)</option>
+                    {channels.map((channel) => (
                       <option key={channel.id} value={channel.id}>
                         {channel.name}
                       </option>
                     ))}
-                </select>
-              </div>
-            )}
+                  </select>
+                </div>
+              )}
 
-            {/* Style Selector */}
-            <div className="selector-item">
-              <label htmlFor="style-select">Style:</label>
-              <select
-                id="style-select"
-                value={selectedStyle || ''}
-                onChange={(e) => onSelectStyle(e.target.value)}
-                disabled={isLoading}
-              >
-                {styles.map((style) => (
-                  <option key={style.id} value={style.id}>
-                    {style.name}
-                  </option>
-                ))}
-              </select>
+              {/* Style Selector - only show if company has styles */}
+              {styles.length > 0 && (
+                <div className="selector-item">
+                  <label htmlFor="style-select">Style:</label>
+                  <select
+                    id="style-select"
+                    value={selectedStyle || ''}
+                    onChange={(e) => onSelectStyle(e.target.value)}
+                    disabled={isLoading}
+                  >
+                    <option value="">(No Style)</option>
+                    {styles.map((style) => (
+                      <option key={style.id} value={style.id}>
+                        {style.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <div className="input-row">
             <textarea

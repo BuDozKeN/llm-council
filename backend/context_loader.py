@@ -1,19 +1,44 @@
 """Business context loader for multi-tenant AI Council."""
 
 import os
+import json
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 # Base directory for business contexts (within councils structure)
 CONTEXTS_DIR = Path(__file__).parent.parent / "councils" / "organisations"
 
 
-def list_available_businesses() -> List[Dict[str, str]]:
+def load_business_config(business_id: str) -> Optional[Dict[str, Any]]:
     """
-    List all available business contexts.
+    Load the config.json for a specific business.
+
+    Args:
+        business_id: The folder name of the business (e.g., 'simple-af')
 
     Returns:
-        List of dicts with 'id' and 'name' for each business
+        The config dict, or None if not found
+    """
+    business_dir = CONTEXTS_DIR / business_id
+    config_file = business_dir / "config.json"
+
+    if not config_file.exists():
+        return None
+
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading config for {business_id}: {e}")
+        return None
+
+
+def list_available_businesses() -> List[Dict[str, Any]]:
+    """
+    List all available business contexts with their configurations.
+
+    Returns:
+        List of dicts with 'id', 'name', 'departments', 'styles' for each business
     """
     businesses = []
 
@@ -37,10 +62,17 @@ def list_available_businesses() -> List[Dict[str, str]]:
                 except Exception:
                     pass
 
-            businesses.append({
+            # Load config if available
+            config = load_business_config(item.name)
+
+            business_entry = {
                 'id': item.name,
-                'name': name
-            })
+                'name': name,
+                'departments': config.get('departments', []) if config else [],
+                'styles': config.get('styles', []) if config else []
+            }
+
+            businesses.append(business_entry)
 
     return sorted(businesses, key=lambda x: x['name'])
 

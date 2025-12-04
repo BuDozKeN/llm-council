@@ -229,4 +229,39 @@ export const api = {
     }
     return response.json();
   },
+
+  /**
+   * Export a conversation as Markdown file.
+   * @param {string} conversationId - The conversation ID
+   * @returns {Promise<void>} - Triggers a file download
+   */
+  async exportConversation(conversationId) {
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/export`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to export conversation');
+    }
+
+    // Get the filename from Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'conversation.md';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match) {
+        filename = match[1];
+      }
+    }
+
+    // Download the file
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };

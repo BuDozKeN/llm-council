@@ -1,0 +1,10 @@
+{
+  "departments": [
+    {
+      "id": "standard",
+      "name": "Standard",
+      "description": "General advisory council"
+    }
+  ],
+  "styles": []
+}

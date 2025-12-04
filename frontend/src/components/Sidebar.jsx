@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { api } from '../api';
 import './Sidebar.css';
 
 export default function Sidebar({
@@ -7,6 +8,7 @@ export default function Sidebar({
   onSelectConversation,
   onNewConversation,
   onOpenLeaderboard,
+  onExportConversation,
   departments = [],
 }) {
   const [filter, setFilter] = useState('all');
@@ -145,12 +147,26 @@ export default function Sidebar({
                         }`}
                         onClick={() => onSelectConversation(conv.id)}
                       >
-                        <div className="conversation-title">
-                          {conv.title || 'New Conversation'}
+                        <div className="conversation-content">
+                          <div className="conversation-title">
+                            {conv.title || 'New Conversation'}
+                          </div>
+                          <div className="conversation-meta">
+                            {conv.message_count} messages
+                          </div>
                         </div>
-                        <div className="conversation-meta">
-                          {conv.message_count} messages
-                        </div>
+                        {conv.message_count > 0 && (
+                          <button
+                            className="export-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              api.exportConversation(conv.id);
+                            }}
+                            title="Export to Markdown"
+                          >
+                            ↓
+                          </button>
+                        )}
                       </div>
                     ))}
 
