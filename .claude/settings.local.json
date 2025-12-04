@@ -13,7 +13,9 @@
       "Bash(python -m uvicorn:*)",
       "Bash(if exist \"node_modules\\.vite\" rmdir /s /q \"node_modules\\.vite\")",
       "Bash(netstat:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

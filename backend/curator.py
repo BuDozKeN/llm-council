@@ -301,23 +301,80 @@ Important:
         }
 
 
+def get_context_file_for_department(business_id: str, department: str) -> Path:
+    """
+    Get the appropriate context file path based on department.
+
+    Args:
+        business_id: The business folder name
+        department: The department ID ("company" for main context, or department ID)
+
+    Returns:
+        Path to the context.md file
+    """
+    if department == "company" or not department:
+        # Company-wide context goes to main context.md
+        return CONTEXTS_DIR / business_id / "context.md"
+    else:
+        # Department-specific context goes to departments/{dept}/context.md
+        # Map common aliases to proper department IDs
+        dept_mapping = {
+            "cto": "technology",
+            "cmo": "marketing",
+            "cfo": "finance",
+            "coo": "operations",
+            "marketing": "marketing",
+            "sales": "sales",
+            "legal": "legal",
+            "finance": "finance",
+            "technology": "technology",
+            "operations": "operations",
+            "executive": "executive"
+        }
+        dept_id = dept_mapping.get(department.lower(), department.lower())
+        return CONTEXTS_DIR / business_id / "departments" / dept_id / "context.md"
+
+
 def apply_suggestion(
     business_id: str,
     suggestion: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Apply a single suggestion to the business context file.
+    Apply a single suggestion to the appropriate context file.
 
     Args:
         business_id: The business to update
-        suggestion: The suggestion dict with section, type, proposed_text, etc.
+        suggestion: The suggestion dict with section, type, department, proposed_text, etc.
 
     Returns:
         Dict with 'success' boolean and 'message'
     """
-    context_file = CONTEXTS_DIR / business_id / "context.md"
+    # Determine which file to update based on department
+    department = suggestion.get('department', 'company')
+    context_file = get_context_file_for_department(business_id, department)
+
     if not context_file.exists():
-        return {'success': False, 'message': 'Context file not found'}
+        # Create the department context file if it doesn't exist
+        if department != "company":
+            context_file.parent.mkdir(parents=True, exist_ok=True)
+            dept_name = department.replace('-', ' ').title()
+            initial_content = f"""# {dept_name} Department Context
+
+> **Last Updated:** {datetime.now().strftime('%Y-%m-%d')}
+> **Organisation:** {business_id}
+
+---
+
+## Department Overview
+
+*To be populated via Knowledge Curator*
+
+## Knowledge Base
+
+"""
+            context_file.write_text(initial_content, encoding='utf-8')
+        else:
+            return {'success': False, 'message': 'Context file not found'}
 
     content = context_file.read_text(encoding='utf-8')
 
@@ -407,10 +464,13 @@ def apply_suggestion(
     # Write back
     try:
         context_file.write_text(new_content, encoding='utf-8')
+        dept_label = department if department != "company" else "company-wide"
         return {
             'success': True,
-            'message': f'Successfully applied {suggestion_type} to "{section_name}"',
-            'updated_at': today
+            'message': f'Successfully applied {suggestion_type} to "{section_name}" ({dept_label} context)',
+            'updated_at': today,
+            'department': department,
+            'file_path': str(context_file.relative_to(CONTEXTS_DIR.parent))
         }
     except Exception as e:
         return {'success': False, 'message': f'Failed to write file: {str(e)}'}

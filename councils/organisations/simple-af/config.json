@@ -1,14 +1,33 @@
 {
   "departments": [
     {
-      "id": "standard",
-      "name": "Standard",
-      "description": "General advisory council"
+      "id": "executive",
+      "name": "Executive",
+      "description": "Strategic advisory and high-level decision making",
+      "roles": [
+        { "id": "ceo", "name": "CEO", "description": "Chief Executive Officer" },
+        { "id": "advisor", "name": "Strategic Advisor", "description": "General strategic guidance" }
+      ]
+    },
+    {
+      "id": "technology",
+      "name": "Technology",
+      "description": "Technical execution and development guidance",
+      "roles": [
+        { "id": "cto", "name": "CTO", "description": "Chief Technology Officer" },
+        { "id": "developer", "name": "Developer", "description": "Development guidance" },
+        { "id": "devops", "name": "DevOps", "description": "Deployment and infrastructure" }
+      ]
     },
     {
       "id": "marketing",
       "name": "Marketing",
-      "description": "Marketing expertise",
+      "description": "Marketing strategy and execution",
+      "roles": [
+        { "id": "cmo", "name": "CMO", "description": "Chief Marketing Officer" },
+        { "id": "content", "name": "Content Manager", "description": "Content creation and strategy" },
+        { "id": "seo", "name": "SEO Specialist", "description": "Search engine optimization" }
+      ],
       "channels": [
         { "id": "linkedin", "name": "LinkedIn" },
         { "id": "x", "name": "X (Twitter)" },
@@ -18,17 +37,35 @@
     {
       "id": "sales",
       "name": "Sales",
-      "description": "Sales expertise"
+      "description": "Sales strategy and outreach",
+      "roles": [
+        { "id": "sales-lead", "name": "Sales Lead", "description": "Sales strategy and execution" }
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "description": "Financial planning and analysis",
+      "roles": [
+        { "id": "cfo", "name": "CFO", "description": "Chief Financial Officer" },
+        { "id": "accountant", "name": "Accountant", "description": "Accounting and bookkeeping" }
+      ]
     },
     {
       "id": "legal",
       "name": "Legal",
-      "description": "Legal expertise"
+      "description": "Legal compliance and contracts",
+      "roles": [
+        { "id": "legal-counsel", "name": "Legal Counsel", "description": "Legal advice and compliance" }
+      ]
     },
     {
-      "id": "executive",
-      "name": "Executive",
-      "description": "Strategic advisory"
+      "id": "operations",
+      "name": "Operations",
+      "description": "Business operations and processes",
+      "roles": [
+        { "id": "coo", "name": "COO", "description": "Chief Operations Officer" }
+      ]
     }
   ],
   "styles": [
