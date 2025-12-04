@@ -10,7 +10,7 @@ import json
 import asyncio
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings
+from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings, chat_stream_response
 from .context_loader import list_available_businesses, load_business_context
 from . import leaderboard
 from . import triage
@@ -41,12 +41,27 @@ class SendMessageRequest(BaseModel):
     department: Optional[str] = "standard"
 
 
+class ChatRequest(BaseModel):
+    """Request to send a chat message (Chairman only, no full council)."""
+    content: str
+    business_id: Optional[str] = None
+    department_id: Optional[str] = None
+
+
+class CreateDepartmentRequest(BaseModel):
+    """Request to create a new department for a business."""
+    id: str
+    name: str
+
+
 class ConversationMetadata(BaseModel):
     """Conversation metadata for list view."""
     id: str
     created_at: str
+    last_updated: str
     title: str
     message_count: int
+    archived: bool = False
 
 
 class Conversation(BaseModel):
@@ -67,6 +82,23 @@ async def root():
 async def get_businesses():
     """List all available business contexts."""
     return list_available_businesses()
+
+
+@app.post("/api/businesses/{business_id}/departments")
+async def create_department(business_id: str, request: CreateDepartmentRequest):
+    """Create a new department for a business.
+
+    This scaffolds the department folder structure and creates an initial context file.
+    """
+    from .context_loader import create_department_for_business
+
+    try:
+        result = create_department_for_business(business_id, request.id, request.name)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create department: {str(e)}")
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
@@ -151,6 +183,24 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
 
+    # Build conversation history from existing messages (for follow-up council queries)
+    conversation_history = []
+    for msg in conversation.get("messages", []):
+        if msg.get("role") == "user":
+            conversation_history.append({
+                "role": "user",
+                "content": msg.get("content", "")
+            })
+        elif msg.get("role") == "assistant":
+            # For assistant messages, use the Stage 3 synthesized response
+            stage3 = msg.get("stage3", {})
+            content = stage3.get("response") or stage3.get("content", "")
+            if content:
+                conversation_history.append({
+                    "role": "assistant",
+                    "content": content
+                })
+
     async def event_generator():
         try:
             # Add user message
@@ -164,7 +214,11 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Stage 1: Collect responses with streaming
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
             stage1_results = []
-            async for event in stage1_stream_responses(request.content, business_id=request.business_id):
+            async for event in stage1_stream_responses(
+                request.content,
+                business_id=request.business_id,
+                conversation_history=conversation_history if conversation_history else None
+            ):
                 if event['type'] == 'stage1_token':
                     # Stream individual tokens
                     yield f"data: {json.dumps(event)}\n\n"
@@ -237,6 +291,88 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
         except Exception as e:
             # Send error event
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+@app.post("/api/conversations/{conversation_id}/chat/stream")
+async def chat_with_chairman(conversation_id: str, request: ChatRequest):
+    """
+    Send a follow-up chat message and stream a response from the Chairman only.
+    Used for iterating on council advice without running full deliberation.
+    """
+    # Check if conversation exists
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    async def event_generator():
+        try:
+            # Build conversation history from existing messages
+            history = []
+
+            for msg in conversation.get("messages", []):
+                if msg.get("role") == "user":
+                    history.append({
+                        "role": "user",
+                        "content": msg.get("content", "")
+                    })
+                elif msg.get("role") == "assistant":
+                    # For assistant messages, use the Stage 3 synthesized response
+                    stage3 = msg.get("stage3", {})
+                    content = stage3.get("response") or stage3.get("content", "")
+                    if content:
+                        history.append({
+                            "role": "assistant",
+                            "content": content
+                        })
+
+            # Add the new user message to history
+            history.append({
+                "role": "user",
+                "content": request.content
+            })
+
+            # Also save the user message to storage
+            storage.add_user_message(conversation_id, request.content)
+
+            yield f"data: {json.dumps({'type': 'chat_start'})}\n\n"
+
+            # Stream response from chairman
+            full_content = ""
+            async for event in chat_stream_response(
+                history,
+                business_id=request.business_id,
+                department_id=request.department_id
+            ):
+                if event['type'] == 'chat_token':
+                    full_content += event['content']
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'chat_error':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'chat_complete':
+                    yield f"data: {json.dumps(event)}\n\n"
+
+            # Save the chat response as a simplified assistant message
+            # Use empty stage1/stage2 since this is chat-only
+            storage.add_assistant_message(
+                conversation_id,
+                stage1=[],  # No stage 1 for chat mode
+                stage2=[],  # No stage 2 for chat mode
+                stage3={"model": "chat", "response": full_content}
+            )
+
+            yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+
+        except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(

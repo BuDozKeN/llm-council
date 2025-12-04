@@ -1,34 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import './CuratorPanel.css';
-
-// Department display names
-const DEPARTMENT_LABELS = {
-  company: 'Company-wide',
-  marketing: 'Marketing Department',
-  sales: 'Sales Department',
-  cto: 'CTO / Technical',
-  operations: 'Operations',
-};
-
-const DEPARTMENT_OPTIONS = [
-  { id: 'company', name: 'Company-wide' },
-  { id: 'marketing', name: 'Marketing Department' },
-  { id: 'sales', name: 'Sales Department' },
-  { id: 'cto', name: 'CTO / Technical' },
-  { id: 'operations', name: 'Operations' },
-];
 
 /**
  * CuratorPanel - Knowledge Curator component
  *
  * Analyzes conversations and suggests updates to the business context.
  * Shows suggestions in a user-friendly format with Accept/Reject/Edit options.
+ * Supports dynamic department selection and creating new departments.
  */
 export default function CuratorPanel({
   conversationId,
   businessId,
   departmentId,
+  departments = [], // Dynamic departments from business config
   onClose,
 }) {
   const [status, setStatus] = useState('idle'); // idle, analyzing, done, error
@@ -43,6 +28,39 @@ export default function CuratorPanel({
   const [curatorHistory, setCuratorHistory] = useState([]);
   const [contextLastUpdated, setContextLastUpdated] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(true);
+  // New department creation state
+  const [creatingDeptForIndex, setCreatingDeptForIndex] = useState(null); // which suggestion is creating a new dept
+  const [newDeptName, setNewDeptName] = useState('');
+  const [newDeptCreating, setNewDeptCreating] = useState(false);
+  const [localDepartments, setLocalDepartments] = useState([]); // Newly created departments (not yet in config)
+
+  // Build department options: Company-wide + dynamic departments + locally created ones
+  const departmentOptions = useMemo(() => {
+    const options = [{ id: 'company', name: 'Company-wide' }];
+
+    // Add departments from business config
+    if (departments && departments.length > 0) {
+      departments.forEach(dept => {
+        options.push({ id: dept.id, name: dept.name });
+      });
+    }
+
+    // Add any locally created departments (during this curator session)
+    localDepartments.forEach(dept => {
+      if (!options.find(o => o.id === dept.id)) {
+        options.push(dept);
+      }
+    });
+
+    return options;
+  }, [departments, localDepartments]);
+
+  // Get department display name by ID
+  const getDepartmentLabel = (deptId) => {
+    if (!deptId || deptId === 'company') return 'Company-wide';
+    const dept = departmentOptions.find(d => d.id === deptId);
+    return dept ? dept.name : deptId;
+  };
 
   // Fetch curator history and context last updated on mount
   useEffect(() => {
@@ -214,6 +232,53 @@ export default function CuratorPanel({
     setSuggestions(prev => prev.map((s, i) =>
       i === index ? { ...s, status: 'rejected' } : s
     ));
+  };
+
+  // Start creating a new department for a specific suggestion
+  const startCreatingDepartment = (index) => {
+    setCreatingDeptForIndex(index);
+    setNewDeptName('');
+  };
+
+  // Cancel new department creation
+  const cancelCreatingDepartment = () => {
+    setCreatingDeptForIndex(null);
+    setNewDeptName('');
+  };
+
+  // Create a new department and select it for the suggestion
+  const createDepartment = async (index) => {
+    if (!newDeptName.trim()) return;
+
+    setNewDeptCreating(true);
+
+    try {
+      // Create department ID from name (lowercase, hyphenated)
+      const deptId = newDeptName.trim().toLowerCase().replace(/\s+/g, '-');
+
+      // Call API to create department (this will scaffold the folder structure)
+      await api.createDepartment(businessId, {
+        id: deptId,
+        name: newDeptName.trim(),
+      });
+
+      // Add to local departments list
+      const newDept = { id: deptId, name: newDeptName.trim() };
+      setLocalDepartments(prev => [...prev, newDept]);
+
+      // Select the new department for this suggestion
+      changeDepartment(index, deptId);
+
+      // Close the creation form
+      setCreatingDeptForIndex(null);
+      setNewDeptName('');
+    } catch (err) {
+      console.error('Failed to create department:', err);
+      // Show error to user (could add error state if needed)
+      alert('Failed to create department: ' + err.message);
+    } finally {
+      setNewDeptCreating(false);
+    }
   };
 
   const startEditing = (index) => {
@@ -510,7 +575,7 @@ export default function CuratorPanel({
                           <span className="collapsed-section">{suggestion.section}</span>
                           <span className="collapsed-status-text">
                             {suggestion.status === 'accepted'
-                              ? `Applied to ${DEPARTMENT_LABELS[suggestion.selectedDepartment] || 'knowledge base'}`
+                              ? `Applied to ${getDepartmentLabel(suggestion.selectedDepartment)}`
                               : 'Rejected'}
                           </span>
                         </div>
@@ -592,25 +657,87 @@ export default function CuratorPanel({
                         {/* Actions - including Save Location */}
                         {!suggestion.status && (
                           <div className="suggestion-actions-area">
+                            {/* LLM Recommendation banner - show prominently when LLM suggests a department */}
+                            {suggestion.department && suggestion.department !== 'company' && (
+                              <div className="llm-recommendation">
+                                <span className="recommendation-icon">🤖</span>
+                                <span className="recommendation-text">
+                                  AI recommends saving to <strong>{getDepartmentLabel(suggestion.department)}</strong>
+                                </span>
+                                {suggestion.selectedDepartment !== suggestion.department && (
+                                  <button
+                                    className="use-recommendation-btn"
+                                    onClick={() => changeDepartment(index, suggestion.department)}
+                                    disabled={processingIndex !== null}
+                                  >
+                                    Use recommendation
+                                  </button>
+                                )}
+                              </div>
+                            )}
+
                             {/* Save Location - positioned with actions so user sees it after reading */}
                             <div className="save-location-row">
                               <div className="save-location-label">
                                 <span className="save-icon">💾</span>
                                 Save to:
                               </div>
-                              <select
-                                className="department-select"
-                                value={suggestion.selectedDepartment || 'company'}
-                                onChange={(e) => changeDepartment(index, e.target.value)}
-                                disabled={processingIndex !== null}
-                              >
-                                {DEPARTMENT_OPTIONS.map(dept => (
-                                  <option key={dept.id} value={dept.id}>
-                                    {dept.name}
-                                    {suggestion.department === dept.id ? ' (Recommended)' : ''}
-                                  </option>
-                                ))}
-                              </select>
+
+                              {/* Show new department creation form or selector */}
+                              {creatingDeptForIndex === index ? (
+                                <div className="new-dept-form">
+                                  <input
+                                    type="text"
+                                    className="new-dept-input"
+                                    placeholder="Enter department name..."
+                                    value={newDeptName}
+                                    onChange={(e) => setNewDeptName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') createDepartment(index);
+                                      if (e.key === 'Escape') cancelCreatingDepartment();
+                                    }}
+                                    disabled={newDeptCreating}
+                                    autoFocus
+                                  />
+                                  <button
+                                    className="new-dept-create-btn"
+                                    onClick={() => createDepartment(index)}
+                                    disabled={!newDeptName.trim() || newDeptCreating}
+                                  >
+                                    {newDeptCreating ? 'Creating...' : 'Create'}
+                                  </button>
+                                  <button
+                                    className="new-dept-cancel-btn"
+                                    onClick={cancelCreatingDepartment}
+                                    disabled={newDeptCreating}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <select
+                                    className="department-select"
+                                    value={suggestion.selectedDepartment || 'company'}
+                                    onChange={(e) => {
+                                      if (e.target.value === '__new__') {
+                                        startCreatingDepartment(index);
+                                      } else {
+                                        changeDepartment(index, e.target.value);
+                                      }
+                                    }}
+                                    disabled={processingIndex !== null}
+                                  >
+                                    {departmentOptions.map(dept => (
+                                      <option key={dept.id} value={dept.id}>
+                                        {dept.name}
+                                        {suggestion.department === dept.id ? ' (Recommended)' : ''}
+                                      </option>
+                                    ))}
+                                    <option value="__new__">+ Create new department...</option>
+                                  </select>
+                                </>
+                              )}
                             </div>
 
                             {/* Action buttons */}
@@ -665,7 +792,7 @@ export default function CuratorPanel({
                         {suggestion.status === 'accepted' && (
                           <div className="suggestion-status accepted">
                             <span className="status-icon">✓</span>
-                            Applied to {DEPARTMENT_LABELS[suggestion.selectedDepartment] || 'knowledge base'}
+                            Applied to {getDepartmentLabel(suggestion.selectedDepartment)}
                           </div>
                         )}
                         {suggestion.status === 'rejected' && (

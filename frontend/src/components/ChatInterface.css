@@ -464,3 +464,127 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
 }
+
+/* Mode Toggle Bar - for switching between chat and council modes */
+.mode-toggle-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  min-height: 40px; /* Prevent layout shift */
+}
+
+.mode-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 4px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  padding: 3px;
+}
+
+.mode-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 17px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn:hover {
+  color: #333;
+}
+
+.mode-btn.active {
+  background: #fff;
+  color: #4a90e2;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mode-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.mode-toggle-bar.disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Department pills - matches mode toggle styling */
+.department-pills {
+  display: flex;
+  gap: 4px;
+  background: #e8e8e8;
+  border-radius: 20px;
+  padding: 3px;
+  margin-left: 8px;
+}
+
+.dept-pill {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 17px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dept-pill:hover {
+  color: #333;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.dept-pill.active {
+  background: #fff;
+  color: #6b46c1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.dept-pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Chat response styling - simpler than full council */
+.chat-response {
+  background: linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+
+.chat-response .chat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Blinking cursor for streaming text */
+.cursor-blink {
+  animation: blink 1s infinite;
+  font-weight: bold;
+  color: #4a90e2;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}

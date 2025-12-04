@@ -202,6 +202,10 @@
   font-size: 11px;
 }
 
+.conversation-time {
+  color: #999;
+}
+
 .export-btn {
   width: 24px;
   height: 24px;

@@ -30,9 +30,11 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
     """
     ensure_data_dir()
 
+    now = datetime.utcnow().isoformat()
     conversation = {
         "id": conversation_id,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": now,
+        "last_updated": now,
         "title": "New Conversation",
         "messages": []
     }
@@ -80,30 +82,51 @@ def save_conversation(conversation: Dict[str, Any]):
 
 def list_conversations() -> List[Dict[str, Any]]:
     """
-    List all conversations (metadata only).
+    List all conversations with at least one message (metadata only).
+    Empty conversations (0 messages) are excluded and deleted.
 
     Returns:
-        List of conversation metadata dicts
+        List of conversation metadata dicts, sorted by last_updated (newest first)
     """
     ensure_data_dir()
 
     conversations = []
+    empty_files = []
+
     for filename in os.listdir(DATA_DIR):
         if filename.endswith('.json'):
             path = os.path.join(DATA_DIR, filename)
             with open(path, 'r') as f:
                 data = json.load(f)
-                # Return metadata only
+                message_count = len(data["messages"])
+
+                # Skip and mark for deletion conversations with 0 messages
+                if message_count == 0:
+                    empty_files.append(path)
+                    continue
+
+                # Fallback to created_at if last_updated doesn't exist (for older conversations)
+                last_updated = data.get("last_updated", data["created_at"])
+
+                # Return metadata only for conversations with messages
                 conversations.append({
                     "id": data["id"],
                     "created_at": data["created_at"],
+                    "last_updated": last_updated,
                     "title": data.get("title", "New Conversation"),
-                    "message_count": len(data["messages"]),
+                    "message_count": message_count,
                     "archived": data.get("archived", False)
                 })
 
-    # Sort by creation time, newest first
-    conversations.sort(key=lambda x: x["created_at"], reverse=True)
+    # Clean up empty conversation files
+    for path in empty_files:
+        try:
+            os.remove(path)
+        except Exception as e:
+            print(f"Failed to delete empty conversation file {path}: {e}")
+
+    # Sort by last_updated time, newest first
+    conversations.sort(key=lambda x: x["last_updated"], reverse=True)
 
     return conversations
 
@@ -124,6 +147,9 @@ def add_user_message(conversation_id: str, content: str):
         "role": "user",
         "content": content
     })
+
+    # Update last_updated timestamp
+    conversation["last_updated"] = datetime.utcnow().isoformat()
 
     save_conversation(conversation)
 
@@ -153,6 +179,9 @@ def add_assistant_message(
         "stage2": stage2,
         "stage3": stage3
     })
+
+    # Update last_updated timestamp
+    conversation["last_updated"] = datetime.utcnow().isoformat()
 
     save_conversation(conversation)
 

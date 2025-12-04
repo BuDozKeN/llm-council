@@ -2,6 +2,32 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { api } from '../api';
 import './Sidebar.css';
 
+/**
+ * Convert an ISO timestamp to a human-readable relative time string.
+ * e.g., "2 hours", "a day", "3 days"
+ */
+function getRelativeTime(isoTimestamp) {
+  if (!isoTimestamp) return '';
+
+  const now = new Date();
+  const then = new Date(isoTimestamp);
+  const diffMs = now - then;
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) {
+    return 'just now';
+  } else if (diffMinutes < 60) {
+    return diffMinutes === 1 ? '1 minute' : `${diffMinutes} minutes`;
+  } else if (diffHours < 24) {
+    return diffHours === 1 ? '1 hour' : `${diffHours} hours`;
+  } else {
+    return diffDays === 1 ? 'a day' : `${diffDays} days`;
+  }
+}
+
 export default function Sidebar({
   conversations,
   currentConversationId,
@@ -246,6 +272,9 @@ export default function Sidebar({
                           )}
                           <div className="conversation-meta">
                             {conv.message_count} messages
+                            {conv.last_updated && (
+                              <span className="conversation-time"> [{getRelativeTime(conv.last_updated)}]</span>
+                            )}
                           </div>
                         </div>
                         <div className="conversation-menu-container" ref={menuOpenId === conv.id ? menuRef : null}>

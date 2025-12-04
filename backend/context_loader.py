@@ -348,3 +348,91 @@ When responding:
         system_prompt += f"5. Focus your advice from the perspective of the {department_id.replace('-', ' ').title()} department\n"
 
     return system_prompt
+
+
+def create_department_for_business(business_id: str, department_id: str, department_name: str) -> Dict[str, Any]:
+    """
+    Create a new department for a business.
+
+    This function:
+    1. Creates the department folder structure
+    2. Creates an initial context.md template
+    3. Updates the config.json to include the new department
+
+    Args:
+        business_id: The business folder ID
+        department_id: The department ID (lowercase, hyphenated)
+        department_name: The display name for the department
+
+    Returns:
+        Dict with success status, department_id, and message
+
+    Raises:
+        ValueError: If business doesn't exist or department already exists
+    """
+    from datetime import datetime
+
+    business_dir = CONTEXTS_DIR / business_id
+
+    if not business_dir.exists():
+        raise ValueError(f"Business '{business_id}' does not exist")
+
+    # Create department directory
+    department_dir = business_dir / "departments" / department_id
+
+    if department_dir.exists():
+        raise ValueError(f"Department '{department_id}' already exists for business '{business_id}'")
+
+    # Create the directory
+    department_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create initial context.md template
+    today = datetime.now().strftime("%Y-%m-%d")
+    context_content = f"""# {department_name} Department Context
+
+> Last updated: {today}
+
+## Overview
+
+*Department-specific knowledge will be curated here via the Knowledge Curator.*
+
+## Key Information
+
+*To be populated via Knowledge Curator*
+
+---
+
+*This department context was created on {today}.*
+"""
+
+    context_file = department_dir / "context.md"
+    context_file.write_text(context_content, encoding='utf-8')
+
+    # Update config.json to include the new department
+    config_file = business_dir / "config.json"
+
+    if config_file.exists():
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    else:
+        config = {"departments": [], "styles": []}
+
+    # Check if department already in config
+    existing_ids = [d.get('id') for d in config.get('departments', [])]
+    if department_id not in existing_ids:
+        new_dept = {
+            "id": department_id,
+            "name": department_name,
+            "description": f"{department_name} department knowledge base"
+        }
+        config.setdefault('departments', []).append(new_dept)
+
+        # Write updated config
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+
+    return {
+        "success": True,
+        "department_id": department_id,
+        "message": f"Department '{department_name}' created successfully"
+    }

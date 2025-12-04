@@ -51,7 +51,8 @@ async def stage1_stream_responses(
     business_id: Optional[str] = None,
     department_id: Optional[str] = None,
     channel_id: Optional[str] = None,
-    style_id: Optional[str] = None
+    style_id: Optional[str] = None,
+    conversation_history: Optional[List[Dict[str, str]]] = None
 ) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Stage 1 with streaming: Collect individual responses from all council models,
@@ -63,6 +64,7 @@ async def stage1_stream_responses(
         department_id: Optional department persona to load
         channel_id: Optional channel context to load
         style_id: Optional writing style to load
+        conversation_history: Optional list of previous messages [{"role": "user/assistant", "content": "..."}]
 
     Yields:
         Dicts with 'type' (token/complete), 'model', and 'content'/'response'
@@ -78,6 +80,10 @@ async def stage1_stream_responses(
     )
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
+
+    # Add conversation history if provided (for follow-up council queries)
+    if conversation_history:
+        messages.extend(conversation_history)
 
     messages.append({"role": "user", "content": user_query})
 
@@ -736,3 +742,77 @@ async def run_full_council(
     }
 
     return stage1_results, stage2_results, stage3_result, metadata
+
+
+async def chat_stream_response(
+    conversation_history: List[Dict[str, Any]],
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stream a chat response from the Chairman model only.
+    Used for follow-up questions after council deliberation.
+
+    Args:
+        conversation_history: List of message dicts with 'role' and 'content'
+        business_id: Optional business context to load
+        department_id: Optional department context to load
+
+    Yields:
+        Dicts with 'type' (chat_token/chat_complete/chat_error) and 'content'/'model'
+    """
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id
+    )
+
+    # Add a chat-specific system prompt prefix
+    chat_system = """You are continuing a conversation as the AI Council's advisor. The user has already received council deliberation on their question and may now have follow-up questions, clarifications, or want to explore specific points further.
+
+Be helpful, concise, and reference the previous discussion when relevant. You don't need to consult other models - just provide direct, thoughtful responses."""
+
+    if system_prompt:
+        messages.append({"role": "system", "content": chat_system + "\n\n" + system_prompt})
+    else:
+        messages.append({"role": "system", "content": chat_system})
+
+    # Add the conversation history
+    messages.extend(conversation_history)
+
+    # Stream from chairman model(s) with fallback
+    successful_chairman = None
+    final_content = ""
+
+    for chairman in CHAIRMAN_MODELS:
+        print(f"[CHAT] Trying chairman: {chairman}", flush=True)
+        try:
+            content = ""
+            async for chunk in query_model_stream(chairman, messages):
+                content += chunk
+                yield {"type": "chat_token", "content": chunk, "model": chairman}
+
+            if content:
+                print(f"[CHAT] {chairman} succeeded with {len(content)} chars", flush=True)
+                final_content = content
+                successful_chairman = chairman
+                break
+        except Exception as e:
+            print(f"[CHAT] {chairman} failed: {e}", flush=True)
+            yield {"type": "chat_error", "model": chairman, "error": str(e)}
+            continue
+
+    if not successful_chairman:
+        print(f"[CHAT] All chairmen failed!", flush=True)
+        final_content = "[Error: All models failed. Please try again.]"
+        successful_chairman = CHAIRMAN_MODELS[0]
+
+    yield {
+        "type": "chat_complete",
+        "data": {
+            "model": successful_chairman,
+            "content": final_content
+        }
+    }

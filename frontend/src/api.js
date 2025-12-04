@@ -150,6 +150,79 @@ export const api = {
   },
 
   /**
+   * Send a chat message (Chairman only, no full council deliberation).
+   * Used for follow-up questions after council response.
+   * @param {string} conversationId - The conversation ID
+   * @param {string} content - The message content
+   * @param {function} onEvent - Callback function for each event: (eventType, data) => void
+   * @param {object} options - Context options
+   * @param {string|null} options.businessId - Optional business context ID
+   * @param {string|null} options.departmentId - Optional department context ID
+   * @param {AbortSignal} options.signal - Optional AbortSignal for cancellation
+   * @returns {Promise<void>}
+   */
+  async sendChatStream(conversationId, content, onEvent, options = {}) {
+    const { businessId = null, departmentId = null, signal = null } = options;
+    const response = await fetch(
+      `${API_BASE}/api/conversations/${conversationId}/chat/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content,
+          business_id: businessId,
+          department_id: departmentId,
+        }),
+        signal,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to send chat message');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE events
+        while (buffer.includes('\n\n')) {
+          const eventEnd = buffer.indexOf('\n\n');
+          const eventText = buffer.slice(0, eventEnd);
+          buffer = buffer.slice(eventEnd + 2);
+
+          for (const line of eventText.split('\n')) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              try {
+                const event = JSON.parse(data);
+                onEvent(event.type, event);
+              } catch (e) {
+                console.error('Failed to parse SSE event:', e);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        onEvent('cancelled', { message: 'Request was cancelled' });
+      } else {
+        throw e;
+      }
+    }
+  },
+
+  /**
    * Get leaderboard summary (overall + all departments).
    */
   async getLeaderboardSummary() {
@@ -449,6 +522,33 @@ export const api = {
     );
     if (!response.ok) {
       throw new Error('Failed to get context last updated');
+    }
+    return response.json();
+  },
+
+  /**
+   * Create a new department for a business.
+   * This scaffolds the department folder structure and creates an initial context file.
+   * @param {string} businessId - The business context ID
+   * @param {object} department - The department to create
+   * @param {string} department.id - The department ID (lowercase, hyphenated)
+   * @param {string} department.name - The display name for the department
+   * @returns {Promise<{success: boolean, department_id: string, message: string}>}
+   */
+  async createDepartment(businessId, department) {
+    const response = await fetch(
+      `${API_BASE}/api/businesses/${businessId}/departments`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(department),
+      }
+    );
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to create department' }));
+      throw new Error(error.detail || 'Failed to create department');
     }
     return response.json();
   },

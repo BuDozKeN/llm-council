@@ -11,6 +11,7 @@ import './ChatInterface.css';
 export default function ChatInterface({
   conversation,
   onSendMessage,
+  onSendChatMessage,
   onStopGeneration,
   isLoading,
   businesses = [],
@@ -39,6 +40,7 @@ export default function ChatInterface({
   onTriageProceed,
 }) {
   const [input, setInput] = useState('');
+  const [chatMode, setChatMode] = useState('chat'); // 'chat' (chairman only) or 'council' (full)
   const [showCurator, setShowCurator] = useState(null); // messageIndex of active curator or null
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -72,7 +74,18 @@ export default function ChatInterface({
     e.preventDefault();
     if (input.trim() && !isLoading) {
       userHasScrolledUp.current = false; // Reset so new responses auto-scroll
-      onSendMessage(input);
+
+      // For new conversations (0 messages), always go through triage/council
+      // For existing conversations, check the chat mode
+      if (conversation.messages.length === 0) {
+        onSendMessage(input);
+      } else if (chatMode === 'council') {
+        onSendMessage(input);
+      } else {
+        // Chat mode - send directly to chairman
+        onSendChatMessage(input);
+      }
+
       setInput('');
     }
   };
@@ -138,35 +151,62 @@ export default function ChatInterface({
                 </div>
               ) : (
                 <div className="assistant-message">
-                  <div className="message-label">AI Council</div>
+                  <div className="message-label">
+                    {msg.isChat || (msg.stage1 && msg.stage1.length === 0) ? 'AI Advisor' : 'AI Council'}
+                  </div>
 
-                  {/* Stage 1 - show with streaming or final responses */}
-                  {(msg.loading?.stage1 || msg.stage1 || (msg.stage1Streaming && Object.keys(msg.stage1Streaming).length > 0)) && (
-                    <Stage1
-                      responses={msg.stage1}
-                      streaming={msg.stage1Streaming}
-                      isLoading={msg.loading?.stage1}
-                    />
-                  )}
+                  {/* For chat-only messages, show a simpler response */}
+                  {(msg.isChat || (msg.stage1 && msg.stage1.length === 0)) ? (
+                    /* Chat-only response - just show the response directly */
+                    <div className="chat-response">
+                      <div className="chat-label">Response</div>
+                      {msg.stage3Streaming ? (
+                        <div className="markdown-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.stage3Streaming.text || ''}
+                          </ReactMarkdown>
+                          {msg.loading?.stage3 && <span className="cursor-blink">|</span>}
+                        </div>
+                      ) : msg.stage3 ? (
+                        <div className="markdown-content">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.stage3.response || msg.stage3.content || ''}
+                          </ReactMarkdown>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    /* Full council response - show all 3 stages */
+                    <>
+                      {/* Stage 1 - show with streaming or final responses */}
+                      {(msg.loading?.stage1 || msg.stage1 || (msg.stage1Streaming && Object.keys(msg.stage1Streaming).length > 0)) && (
+                        <Stage1
+                          responses={msg.stage1}
+                          streaming={msg.stage1Streaming}
+                          isLoading={msg.loading?.stage1}
+                        />
+                      )}
 
-                  {/* Stage 2 - show with streaming or final rankings */}
-                  {(msg.loading?.stage2 || msg.stage2 || (msg.stage2Streaming && Object.keys(msg.stage2Streaming).length > 0)) && (
-                    <Stage2
-                      rankings={msg.stage2}
-                      streaming={msg.stage2Streaming}
-                      labelToModel={msg.metadata?.label_to_model}
-                      aggregateRankings={msg.metadata?.aggregate_rankings}
-                      isLoading={msg.loading?.stage2}
-                    />
-                  )}
+                      {/* Stage 2 - show with streaming or final rankings */}
+                      {(msg.loading?.stage2 || msg.stage2 || (msg.stage2Streaming && Object.keys(msg.stage2Streaming).length > 0)) && (
+                        <Stage2
+                          rankings={msg.stage2}
+                          streaming={msg.stage2Streaming}
+                          labelToModel={msg.metadata?.label_to_model}
+                          aggregateRankings={msg.metadata?.aggregate_rankings}
+                          isLoading={msg.loading?.stage2}
+                        />
+                      )}
 
-                  {/* Stage 3 - show with streaming or final response */}
-                  {(msg.loading?.stage3 || msg.stage3 || msg.stage3Streaming) && (
-                    <Stage3
-                      finalResponse={msg.stage3}
-                      streaming={msg.stage3Streaming}
-                      isLoading={msg.loading?.stage3}
-                    />
+                      {/* Stage 3 - show with streaming or final response */}
+                      {(msg.loading?.stage3 || msg.stage3 || msg.stage3Streaming) && (
+                        <Stage3
+                          finalResponse={msg.stage3}
+                          streaming={msg.stage3Streaming}
+                          isLoading={msg.loading?.stage3}
+                        />
+                      )}
+                    </>
                   )}
 
                   {/* Curator Panel - show after Stage 3 is complete, only for last message, and only if business context is enabled */}
@@ -181,6 +221,7 @@ export default function ChatInterface({
                           conversationId={conversation.id}
                           businessId={selectedBusiness}
                           departmentId={selectedDepartment}
+                          departments={departments}
                           onClose={() => setShowCurator(null)}
                         />
                       ) : (
@@ -214,11 +255,14 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Only show input form when no triage is active */}
-      {conversation.messages.length === 0 && !triageState && (
+      {/* Show input form when:
+          1. New conversation (0 messages) and no triage active
+          2. Existing conversation with messages and not loading (follow-up mode)
+      */}
+      {!triageState && (
         <form className="input-form" onSubmit={handleSubmit}>
-          {/* Clean context bar - minimal, intuitive */}
-          {businesses.length > 0 && (
+          {/* Context bar - only show for new conversations */}
+          {conversation.messages.length === 0 && businesses.length > 0 && (
             <div className="context-bar">
               {/* Company selector as subtle dropdown */}
               <select
@@ -325,15 +369,75 @@ export default function ChatInterface({
             </div>
           )}
 
+          {/* Mode toggle - only show for follow-up messages (after first exchange) */}
+          {conversation.messages.length > 0 && (
+            <div className={`mode-toggle-bar ${isLoading ? 'disabled' : ''}`}>
+              <span className="mode-label">Continue with:</span>
+              <div className="mode-buttons">
+                <button
+                  type="button"
+                  className={`mode-btn ${chatMode === 'chat' ? 'active' : ''}`}
+                  onClick={() => !isLoading && setChatMode('chat')}
+                  disabled={isLoading}
+                  title="Quick follow-up with Claude Opus 4.5 (faster, uses less tokens)"
+                >
+                  Chat
+                </button>
+                <button
+                  type="button"
+                  className={`mode-btn ${chatMode === 'council' ? 'active' : ''}`}
+                  onClick={() => !isLoading && setChatMode('council')}
+                  disabled={isLoading}
+                  title="Full council deliberation with all 5 models"
+                >
+                  Full Council
+                </button>
+              </div>
+
+              {/* Department pills - only show when Full Council is selected and company has departments */}
+              {chatMode === 'council' && selectedBusiness && departments.length > 0 && (
+                <div className="department-pills">
+                  <button
+                    type="button"
+                    className={`dept-pill ${!selectedDepartment ? 'active' : ''}`}
+                    onClick={() => !isLoading && onSelectDepartment(null)}
+                    disabled={isLoading}
+                    title="Consult the general council"
+                  >
+                    General
+                  </button>
+                  {departments.map((dept) => (
+                    <button
+                      key={dept.id}
+                      type="button"
+                      className={`dept-pill ${selectedDepartment === dept.id ? 'active' : ''}`}
+                      onClick={() => !isLoading && onSelectDepartment(dept.id)}
+                      disabled={isLoading}
+                      title={`Consult the ${dept.name} council`}
+                    >
+                      {dept.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="input-row">
             <textarea
               className="message-input"
-              placeholder="Ask your question... (Shift+Enter for new line, Enter to send)"
+              placeholder={
+                conversation.messages.length === 0
+                  ? "Ask your question... (Shift+Enter for new line, Enter to send)"
+                  : chatMode === 'chat'
+                  ? "Ask a follow-up question... (Chairman only)"
+                  : "Ask a new question for the full council..."
+              }
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              rows={3}
+              rows={2}
             />
             {isLoading ? (
               <button
@@ -349,7 +453,7 @@ export default function ChatInterface({
                 className="send-button"
                 disabled={!input.trim()}
               >
-                Send
+                {conversation.messages.length === 0 ? 'Send' : chatMode === 'chat' ? 'Chat' : 'Council'}
               </button>
             )}
           </div>

@@ -113,17 +113,21 @@ function App() {
     }
   };
 
-  const handleNewConversation = async () => {
-    try {
-      const newConv = await api.createConversation();
-      setConversations([
-        { id: newConv.id, created_at: newConv.created_at, message_count: 0 },
-        ...conversations,
-      ]);
-      setCurrentConversationId(newConv.id);
-    } catch (error) {
-      console.error('Failed to create conversation:', error);
-    }
+  const handleNewConversation = () => {
+    // Create a temporary conversation in memory only - don't persist until first message
+    const tempId = `temp-${Date.now()}`;
+    const tempConv = {
+      id: tempId,
+      created_at: new Date().toISOString(),
+      title: 'New Conversation',
+      messages: [],
+      isTemp: true, // Mark as temporary/unsaved
+    };
+
+    // Don't add to conversations list (it would show 0 messages)
+    // Just set it as the current conversation
+    setCurrentConversationId(tempId);
+    setCurrentConversation(tempConv);
   };
 
   const handleSelectConversation = (id) => {
@@ -279,6 +283,36 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
+
+    // If this is a temporary conversation, create it on the backend first
+    let conversationId = currentConversationId;
+    const isTemp = currentConversation?.isTemp || currentConversationId.startsWith('temp-');
+
+    if (isTemp) {
+      try {
+        const newConv = await api.createConversation();
+        conversationId = newConv.id;
+
+        // Update our state with the real conversation ID
+        setCurrentConversationId(conversationId);
+        setCurrentConversation((prev) => ({
+          ...prev,
+          id: conversationId,
+          isTemp: false,
+        }));
+
+        // Add to conversations list now that it will have a message
+        setConversations((prev) => [
+          { id: conversationId, created_at: newConv.created_at, message_count: 0, title: 'New Conversation' },
+          ...prev,
+        ]);
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       // Optimistically add user message to UI
       const userMessage = { role: 'user', content };
@@ -313,7 +347,7 @@ function App() {
       // If useDepartmentContext is false, pass null for department
       const effectiveBusinessId = useCompanyContext ? selectedBusiness : null;
       const effectiveDepartment = useDepartmentContext ? selectedDepartment : null;
-      await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
+      await api.sendMessageStream(conversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
@@ -611,6 +645,142 @@ function App() {
     }
   };
 
+  // Handle chat mode - send to chairman only (no full council)
+  const handleSendChatMessage = async (content) => {
+    if (!currentConversationId || currentConversation?.isTemp) return;
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    setIsLoading(true);
+
+    try {
+      // Optimistically add user message to UI
+      const userMessage = { role: 'user', content };
+      setCurrentConversation((prev) => ({
+        ...prev,
+        messages: [...prev.messages, userMessage],
+      }));
+
+      // Create a partial assistant message for chat response
+      const assistantMessage = {
+        role: 'assistant',
+        stage1: [],
+        stage2: [],
+        stage3: null,
+        stage3Streaming: { text: '', complete: false },
+        isChat: true, // Mark as chat-only message
+        loading: {
+          stage1: false,
+          stage2: false,
+          stage3: true,
+        },
+      };
+
+      // Add the partial assistant message
+      setCurrentConversation((prev) => ({
+        ...prev,
+        messages: [...prev.messages, assistantMessage],
+      }));
+
+      // Build context based on toggles
+      const effectiveBusinessId = useCompanyContext ? selectedBusiness : null;
+      const effectiveDepartmentId = useDepartmentContext ? selectedDepartment : null;
+
+      await api.sendChatStream(currentConversationId, content, (eventType, event) => {
+        switch (eventType) {
+          case 'chat_start':
+            // Chat stream started
+            break;
+
+          case 'chat_token':
+            // Append token to streaming text
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage3Streaming || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage3Streaming: {
+                    ...currentStreaming,
+                    text: currentStreaming.text + event.content,
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'chat_error':
+            console.error('Chat error:', event.error);
+            break;
+
+          case 'chat_complete':
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage3: { model: event.data.model, response: event.data.content },
+                      stage3Streaming: { text: event.data.content, complete: true },
+                      loading: { ...msg.loading, stage3: false },
+                    }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'complete':
+            setIsLoading(false);
+            break;
+
+          case 'error':
+            console.error('Chat stream error:', event.message);
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      loading: { stage1: false, stage2: false, stage3: false },
+                    }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            setIsLoading(false);
+            break;
+
+          case 'cancelled':
+            console.log('Chat request cancelled');
+            setIsLoading(false);
+            break;
+
+          default:
+            console.log('Unknown chat event type:', eventType);
+        }
+      }, {
+        businessId: effectiveBusinessId,
+        departmentId: effectiveDepartmentId,
+        signal: abortControllerRef.current?.signal,
+      });
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Chat request was cancelled');
+        setIsLoading(false);
+        return;
+      }
+      console.error('Failed to send chat message:', error);
+      // Remove optimistic messages on error
+      setCurrentConversation((prev) => ({
+        ...prev,
+        messages: prev.messages.slice(0, -2),
+      }));
+      setIsLoading(false);
+    } finally {
+      abortControllerRef.current = null;
+    }
+  };
+
   return (
     <div className="app">
       <Sidebar
@@ -627,6 +797,7 @@ function App() {
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
+        onSendChatMessage={handleSendChatMessage}
         onStopGeneration={handleStopGeneration}
         isLoading={isLoading}
         businesses={businesses}
