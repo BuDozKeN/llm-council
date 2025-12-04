@@ -1,0 +1,37 @@
+{
+  "departments": [
+    {
+      "id": "standard",
+      "name": "Standard",
+      "description": "General advisory council"
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "description": "Marketing expertise",
+      "channels": [
+        { "id": "linkedin", "name": "LinkedIn" },
+        { "id": "x", "name": "X (Twitter)" },
+        { "id": "email", "name": "Email" }
+      ]
+    },
+    {
+      "id": "sales",
+      "name": "Sales",
+      "description": "Sales expertise"
+    },
+    {
+      "id": "legal",
+      "name": "Legal",
+      "description": "Legal expertise"
+    },
+    {
+      "id": "executive",
+      "name": "Executive",
+      "description": "Strategic advisory"
+    }
+  ],
+  "styles": [
+    { "id": "ann-friedman", "name": "Ann Friedman" }
+  ]
+}
