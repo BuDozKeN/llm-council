@@ -10,8 +10,10 @@ import json
 import asyncio
 
 from . import storage
-from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage2_collect_rankings, stage3_synthesize_final, calculate_aggregate_rankings
-from .context_loader import list_available_businesses
+from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings
+from .context_loader import list_available_businesses, load_business_context
+from . import leaderboard
+from . import triage
 
 app = FastAPI(title="LLM Council API")
 
@@ -34,6 +36,7 @@ class SendMessageRequest(BaseModel):
     """Request to send a message in a conversation."""
     content: str
     business_id: Optional[str] = None
+    department: Optional[str] = "standard"
 
 
 class ConversationMetadata(BaseModel):
@@ -156,21 +159,53 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
-            # Stage 1: Collect responses
+            # Stage 1: Collect responses with streaming
             yield f"data: {json.dumps({'type': 'stage1_start'})}\n\n"
-            stage1_results = await stage1_collect_responses(request.content, request.business_id)
-            yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
+            stage1_results = []
+            async for event in stage1_stream_responses(request.content, business_id=request.business_id):
+                if event['type'] == 'stage1_token':
+                    # Stream individual tokens
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage1_model_complete':
+                    # A single model finished
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage1_model_error':
+                    # A model had an error
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage1_all_complete':
+                    # All models done - capture results
+                    stage1_results = event['data']
+                    yield f"data: {json.dumps({'type': 'stage1_complete', 'data': stage1_results})}\n\n"
 
-            # Stage 2: Collect rankings
+            # Stage 2: Collect rankings with streaming
             yield f"data: {json.dumps({'type': 'stage2_start'})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(request.content, stage1_results, request.business_id)
-            aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
-            yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
+            stage2_results = []
+            label_to_model = {}
+            aggregate_rankings = []
+            async for event in stage2_stream_rankings(request.content, stage1_results, business_id=request.business_id):
+                if event['type'] == 'stage2_token':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_model_complete':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_model_error':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage2_all_complete':
+                    stage2_results = event['data']
+                    label_to_model = event['label_to_model']
+                    aggregate_rankings = event['aggregate_rankings']
+                    yield f"data: {json.dumps({'type': 'stage2_complete', 'data': stage2_results, 'metadata': {'label_to_model': label_to_model, 'aggregate_rankings': aggregate_rankings}})}\n\n"
 
-            # Stage 3: Synthesize final answer
+            # Stage 3: Synthesize final answer with streaming
             yield f"data: {json.dumps({'type': 'stage3_start'})}\n\n"
-            stage3_result = await stage3_synthesize_final(request.content, stage1_results, stage2_results, request.business_id)
-            yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
+            stage3_result = {}
+            async for event in stage3_stream_synthesis(request.content, stage1_results, stage2_results, business_id=request.business_id):
+                if event['type'] == 'stage3_token':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage3_error':
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event['type'] == 'stage3_complete':
+                    stage3_result = event['data']
+                    yield f"data: {json.dumps({'type': 'stage3_complete', 'data': stage3_result})}\n\n"
 
             # Wait for title generation if it was started
             if title_task:
@@ -185,6 +220,15 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 stage2_results,
                 stage3_result
             )
+
+            # Record rankings to leaderboard
+            if aggregate_rankings:
+                leaderboard.record_session_rankings(
+                    conversation_id=conversation_id,
+                    department=request.department or "standard",
+                    business_id=request.business_id,
+                    aggregate_rankings=aggregate_rankings
+                )
 
             # Send completion event
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
@@ -201,6 +245,78 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             "Connection": "keep-alive",
         }
     )
+
+
+# Triage endpoints
+class TriageRequest(BaseModel):
+    """Request for triage analysis."""
+    content: str
+    business_id: Optional[str] = None
+
+
+class TriageContinueRequest(BaseModel):
+    """Request to continue triage with additional info."""
+    original_query: str
+    previous_constraints: Dict[str, Any]
+    user_response: str
+    business_id: Optional[str] = None
+
+
+@app.post("/api/triage/analyze")
+async def analyze_triage(request: TriageRequest):
+    """
+    Analyze a user's question for the 4 required constraints.
+    Returns whether ready to proceed or what questions to ask.
+    """
+    # Load business context if specified
+    business_context = None
+    if request.business_id:
+        business_context = load_business_context(request.business_id)
+
+    result = await triage.analyze_for_triage(
+        request.content,
+        business_context=business_context
+    )
+
+    return result
+
+
+@app.post("/api/triage/continue")
+async def continue_triage_conversation(request: TriageContinueRequest):
+    """
+    Continue triage conversation with user's additional information.
+    """
+    business_context = None
+    if request.business_id:
+        business_context = load_business_context(request.business_id)
+
+    result = await triage.continue_triage(
+        original_query=request.original_query,
+        previous_constraints=request.previous_constraints,
+        user_response=request.user_response,
+        business_context=business_context
+    )
+
+    return result
+
+
+# Leaderboard endpoints
+@app.get("/api/leaderboard")
+async def get_leaderboard_summary():
+    """Get full leaderboard summary with overall and per-department rankings."""
+    return leaderboard.get_leaderboard_summary()
+
+
+@app.get("/api/leaderboard/overall")
+async def get_overall_leaderboard():
+    """Get overall model leaderboard across all sessions."""
+    return leaderboard.get_overall_leaderboard()
+
+
+@app.get("/api/leaderboard/department/{department}")
+async def get_department_leaderboard(department: str):
+    """Get leaderboard for a specific department."""
+    return leaderboard.get_department_leaderboard(department)
 
 
 if __name__ == "__main__":

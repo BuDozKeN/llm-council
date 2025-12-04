@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import Leaderboard from './components/Leaderboard';
+import Triage from './components/Triage';
 import { api } from './api';
 import './App.css';
 
@@ -37,6 +39,12 @@ function App() {
   const [selectedDepartment, setSelectedDepartment] = useState('standard');
   const [selectedChannel, setSelectedChannel] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('');
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  // Triage state
+  const [triageState, setTriageState] = useState(null); // null, 'analyzing', or triage result object
+  const [originalQuery, setOriginalQuery] = useState('');
+  const [isTriageLoading, setIsTriageLoading] = useState(false);
+  const abortControllerRef = useRef(null);
 
   // Load conversations and businesses on mount
   useEffect(() => {
@@ -99,8 +107,98 @@ function App() {
     setCurrentConversationId(id);
   };
 
+  // Triage handlers
+  const handleStartTriage = async (content) => {
+    if (!currentConversationId) return;
+
+    setOriginalQuery(content);
+    setIsTriageLoading(true);
+    setTriageState('analyzing');
+
+    try {
+      const result = await api.analyzeTriage(content, selectedBusiness);
+      setTriageState(result);
+    } catch (error) {
+      console.error('Triage analysis failed:', error);
+      // On error, skip triage and go directly to council
+      handleSendToCouncil(content);
+    } finally {
+      setIsTriageLoading(false);
+    }
+  };
+
+  const handleTriageRespond = async (response) => {
+    if (!triageState || triageState === 'analyzing') return;
+
+    setIsTriageLoading(true);
+
+    try {
+      const result = await api.continueTriage(
+        originalQuery,
+        triageState.constraints || {},
+        response,
+        selectedBusiness
+      );
+      setTriageState(result);
+    } catch (error) {
+      console.error('Triage continue failed:', error);
+      // On error, proceed with what we have
+      handleSendToCouncil(triageState.enhanced_query || originalQuery);
+    } finally {
+      setIsTriageLoading(false);
+    }
+  };
+
+  const handleTriageSkip = () => {
+    // Skip triage and send original query to council
+    handleSendToCouncil(originalQuery);
+  };
+
+  const handleTriageProceed = (enhancedQuery) => {
+    // Proceed with the enhanced query
+    handleSendToCouncil(enhancedQuery);
+  };
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+
+      // Also reset loading states in the last message
+      setCurrentConversation((prev) => {
+        if (!prev || !prev.messages || prev.messages.length === 0) return prev;
+        const messages = [...prev.messages];
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.loading) {
+          lastMsg.loading = {
+            stage1: false,
+            stage2: false,
+            stage3: false,
+          };
+        }
+        return { ...prev, messages };
+      });
+    }
+  };
+
+  // This is called when user submits a message - starts triage first
   const handleSendMessage = async (content) => {
     if (!currentConversationId) return;
+    // Start triage analysis
+    await handleStartTriage(content);
+  };
+
+  // This is called after triage is complete (or skipped) to send to council
+  const handleSendToCouncil = async (content) => {
+    if (!currentConversationId) return;
+
+    // Clear triage state
+    setTriageState(null);
+    setOriginalQuery('');
+
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
     try {
@@ -115,6 +213,7 @@ function App() {
       const assistantMessage = {
         role: 'assistant',
         stage1: null,
+        stage1Streaming: {}, // Track streaming text per model: { 'model-id': { text: '', complete: false } }
         stage2: null,
         stage3: null,
         metadata: null,
@@ -136,58 +235,235 @@ function App() {
         switch (eventType) {
           case 'stage1_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage1 = true;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage1: true }, stage1Streaming: {} }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_token':
+            // Append token to the specific model's streaming text (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage1Streaming?.[model] || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage1Streaming: {
+                    ...msg.stage1Streaming,
+                    [model]: {
+                      ...currentStreaming,
+                      text: currentStreaming.text + event.content,
+                    },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_complete':
+            // Mark a single model as complete (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage1Streaming?.[model];
+                return {
+                  ...msg,
+                  stage1Streaming: {
+                    ...msg.stage1Streaming,
+                    [model]: currentStreaming
+                      ? { ...currentStreaming, complete: true }
+                      : { text: event.response, complete: true },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage1_model_error':
+            // Handle model error (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage1Streaming: {
+                        ...msg.stage1Streaming,
+                        [model]: { text: `Error: ${event.error}`, complete: true, error: true },
+                      },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage1_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage1 = event.data;
-              lastMsg.loading.stage1 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, stage1: event.data, loading: { ...msg.loading, stage1: false } }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage2_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage2 = true;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage2: true }, stage2Streaming: {} }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_token':
+            // Append token to the specific model's stage2 streaming text (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage2Streaming?.[model] || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage2Streaming: {
+                    ...msg.stage2Streaming,
+                    [model]: {
+                      ...currentStreaming,
+                      text: currentStreaming.text + event.content,
+                    },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_complete':
+            // Mark a single model's stage2 evaluation as complete (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage2Streaming?.[model];
+                return {
+                  ...msg,
+                  stage2Streaming: {
+                    ...msg.stage2Streaming,
+                    [model]: currentStreaming
+                      ? { ...currentStreaming, complete: true }
+                      : { text: event.ranking, complete: true },
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage2_model_error':
+            // Handle stage2 model error (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const model = event.model;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage2Streaming: {
+                        ...msg.stage2Streaming,
+                        [model]: { text: `Error: ${event.error}`, complete: true, error: true },
+                      },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage2_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage2 = event.data;
-              lastMsg.metadata = event.metadata;
-              lastMsg.loading.stage2 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage2: event.data,
+                      metadata: event.metadata,
+                      loading: { ...msg.loading, stage2: false },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage3_start':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.loading.stage3 = true;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? { ...msg, loading: { ...msg.loading, stage3: true }, stage3Streaming: { text: '', complete: false } }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage3_token':
+            // Append token to stage3 streaming text (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) => {
+                if (idx !== prev.messages.length - 1) return msg;
+                const currentStreaming = msg.stage3Streaming || { text: '', complete: false };
+                return {
+                  ...msg,
+                  stage3Streaming: {
+                    ...currentStreaming,
+                    text: currentStreaming.text + event.content,
+                  },
+                };
+              });
+              return { ...prev, messages };
+            });
+            break;
+
+          case 'stage3_error':
+            // Handle stage3 error (IMMUTABLE)
+            setCurrentConversation((prev) => {
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage3Streaming: { text: `Error: ${event.error}`, complete: true, error: true },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
 
           case 'stage3_complete':
             setCurrentConversation((prev) => {
-              const messages = [...prev.messages];
-              const lastMsg = messages[messages.length - 1];
-              lastMsg.stage3 = event.data;
-              lastMsg.loading.stage3 = false;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      stage3: event.data,
+                      stage3Streaming: msg.stage3Streaming
+                        ? { ...msg.stage3Streaming, complete: true }
+                        : { text: event.data.response, complete: true },
+                      loading: { ...msg.loading, stage3: false },
+                    }
+                  : msg
+              );
               return { ...prev, messages };
             });
             break;
@@ -205,14 +481,42 @@ function App() {
 
           case 'error':
             console.error('Stream error:', event.message);
+            // Reset all loading states in the message
+            setCurrentConversation((prev) => {
+              if (!prev || !prev.messages || prev.messages.length === 0) return prev;
+              const messages = prev.messages.map((msg, idx) =>
+                idx === prev.messages.length - 1
+                  ? {
+                      ...msg,
+                      loading: { stage1: false, stage2: false, stage3: false },
+                    }
+                  : msg
+              );
+              return { ...prev, messages };
+            });
+            setIsLoading(false);
+            break;
+
+          case 'cancelled':
+            console.log('Request cancelled');
             setIsLoading(false);
             break;
 
           default:
             console.log('Unknown event type:', eventType);
         }
-      }, selectedBusiness);
+      }, {
+        businessId: selectedBusiness,
+        department: selectedDepartment,
+        signal: abortControllerRef.current?.signal,
+      });
     } catch (error) {
+      // Don't treat cancellation as an error
+      if (error.name === 'AbortError') {
+        console.log('Request was cancelled');
+        setIsLoading(false);
+        return;
+      }
       console.error('Failed to send message:', error);
       // Remove optimistic messages on error
       setCurrentConversation((prev) => ({
@@ -220,6 +524,8 @@ function App() {
         messages: prev.messages.slice(0, -2),
       }));
       setIsLoading(false);
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
@@ -230,11 +536,13 @@ function App() {
         currentConversationId={currentConversationId}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
         departments={DEPARTMENTS}
       />
       <ChatInterface
         conversation={currentConversation}
         onSendMessage={handleSendMessage}
+        onStopGeneration={handleStopGeneration}
         isLoading={isLoading}
         businesses={businesses}
         selectedBusiness={selectedBusiness}
@@ -254,6 +562,17 @@ function App() {
         styles={STYLES}
         selectedStyle={selectedStyle}
         onSelectStyle={setSelectedStyle}
+        // Triage props
+        triageState={triageState}
+        originalQuestion={originalQuery}
+        isTriageLoading={isTriageLoading}
+        onTriageRespond={handleTriageRespond}
+        onTriageSkip={handleTriageSkip}
+        onTriageProceed={handleTriageProceed}
+      />
+      <Leaderboard
+        isOpen={isLeaderboardOpen}
+        onClose={() => setIsLeaderboardOpen(false)}
       />
     </div>
   );

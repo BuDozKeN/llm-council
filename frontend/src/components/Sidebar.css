@@ -20,8 +20,29 @@
   color: #1a1a1a;
 }
 
+.sidebar-header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.leaderboard-btn {
+  padding: 10px 14px;
+  background: #fff8e1;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.leaderboard-btn:hover {
+  background: #ffecb3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
 .new-conversation-btn {
-  width: 100%;
+  flex: 1;
   padding: 10px 16px;
   background: #4a90e2;
   border: none;

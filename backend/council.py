@@ -1,8 +1,9 @@
 """3-stage LLM Council orchestration."""
 
-from typing import List, Dict, Any, Tuple, Optional
-from .openrouter import query_models_parallel, query_model
-from .config import COUNCIL_MODELS, CHAIRMAN_MODEL
+import asyncio
+from typing import List, Dict, Any, Tuple, Optional, AsyncGenerator
+from .openrouter import query_models_parallel, query_model, query_model_stream
+from .config import COUNCIL_MODELS, CHAIRMAN_MODEL, CHAIRMAN_MODELS
 from .context_loader import get_system_prompt_with_context
 
 
@@ -43,6 +44,370 @@ async def stage1_collect_responses(
             })
 
     return stage1_results
+
+
+async def stage1_stream_responses(
+    user_query: str,
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 1 with streaming: Collect individual responses from all council models,
+    yielding token updates as they arrive.
+
+    Args:
+        user_query: The user's question
+        business_id: Optional business context to load
+        department_id: Optional department persona to load
+        channel_id: Optional channel context to load
+        style_id: Optional writing style to load
+
+    Yields:
+        Dicts with 'type' (token/complete), 'model', and 'content'/'response'
+    """
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": user_query})
+
+    # Use a queue to collect events from all models
+    queue: asyncio.Queue = asyncio.Queue()
+    model_content: Dict[str, str] = {}
+
+    async def stream_single_model(model: str):
+        """Stream tokens from a single model and put events on the queue."""
+        print(f"[STAGE1 TASK START] {model}: Task started", flush=True)
+        content = ""
+        chunk_count = 0
+        try:
+            async for chunk in query_model_stream(model, messages):
+                chunk_count += 1
+                content += chunk
+                await queue.put({"type": "stage1_token", "model": model, "content": chunk})
+            print(f"[STAGE1 TASK DONE] {model}: Received {chunk_count} chunks, {len(content)} chars", flush=True)
+            model_content[model] = content
+            await queue.put({"type": "stage1_model_complete", "model": model, "response": content})
+        except Exception as e:
+            print(f"[STAGE1 TASK ERROR] {model}: {type(e).__name__}: {e}", flush=True)
+            await queue.put({"type": "stage1_model_error", "model": model, "error": str(e)})
+
+    # Start all model streams with staggered delays to avoid rate limiting
+    print(f"[STAGE1] Starting {len(COUNCIL_MODELS)} models: {COUNCIL_MODELS}", flush=True)
+    tasks = []
+    for i, model in enumerate(COUNCIL_MODELS):
+        if i > 0:
+            print(f"[STAGE1] Waiting 2s before starting {model}...", flush=True)
+            await asyncio.sleep(2.0)  # 2 second delay between each model
+        print(f"[STAGE1] Creating task for {model}", flush=True)
+        tasks.append(asyncio.create_task(stream_single_model(model)))
+
+    # Track how many models have completed
+    completed_count = 0
+    total_models = len(COUNCIL_MODELS)
+    print(f"[STAGE1] All {total_models} tasks created, waiting for results...", flush=True)
+
+    # Yield events as they arrive
+    while completed_count < total_models:
+        try:
+            # Wait for next event with timeout to check if tasks are done
+            event = await asyncio.wait_for(queue.get(), timeout=0.1)
+            yield event
+
+            # Count completions
+            if event['type'] in ('stage1_model_complete', 'stage1_model_error'):
+                completed_count += 1
+        except asyncio.TimeoutError:
+            # Check if all tasks are done
+            if all(task.done() for task in tasks):
+                # Drain any remaining events
+                while not queue.empty():
+                    event = await queue.get()
+                    yield event
+                    if event['type'] in ('stage1_model_complete', 'stage1_model_error'):
+                        completed_count += 1
+                break
+
+    # Yield final complete event with all results
+    final_results = [
+        {"model": model, "response": content}
+        for model, content in model_content.items()
+        if content  # Only include models that returned content
+    ]
+    yield {"type": "stage1_all_complete", "data": final_results}
+
+
+async def stage2_stream_rankings(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]],
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 2 with streaming: Each model ranks the anonymized responses,
+    yielding token updates as they arrive.
+
+    Yields:
+        Dicts with event type and data
+    """
+    # Create anonymized labels for responses (Response A, Response B, etc.)
+    labels = [chr(65 + i) for i in range(len(stage1_results))]  # A, B, C, ...
+
+    # Create mapping from label to model name
+    label_to_model = {
+        f"Response {label}": result['model']
+        for label, result in zip(labels, stage1_results)
+    }
+
+    # Build the ranking prompt
+    responses_text = "\n\n".join([
+        f"Response {label}:\n{result['response']}"
+        for label, result in zip(labels, stage1_results)
+    ])
+
+    ranking_prompt = f"""You are evaluating different responses to the following question:
+
+Question: {user_query}
+
+Here are the responses from different models (anonymized):
+
+{responses_text}
+
+Your task:
+1. First, evaluate each response individually. For each response, explain what it does well and what it does poorly.
+2. Then, at the very end of your response, provide a final ranking.
+
+IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
+- Start with the line "FINAL RANKING:" (all caps, with colon)
+- Then list the responses from best to worst as a numbered list
+- Each line should be: number, period, space, then ONLY the response label (e.g., "1. Response A")
+- Do not add any other text or explanations in the ranking section
+
+Example of the correct format for your ENTIRE response:
+
+Response A provides good detail on X but misses Y...
+Response B is accurate but lacks depth on Z...
+Response C offers the most comprehensive answer...
+
+FINAL RANKING:
+1. Response C
+2. Response A
+3. Response B
+
+Now provide your evaluation and ranking:"""
+
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": ranking_prompt})
+
+    # Use a queue to collect events from all models
+    queue: asyncio.Queue = asyncio.Queue()
+    model_content: Dict[str, str] = {}
+
+    async def stream_single_model(model: str):
+        """Stream tokens from a single model and put events on the queue."""
+        print(f"[STAGE2 TASK START] {model}: Task started", flush=True)
+        content = ""
+        chunk_count = 0
+        try:
+            async for chunk in query_model_stream(model, messages):
+                chunk_count += 1
+                content += chunk
+                await queue.put({"type": "stage2_token", "model": model, "content": chunk})
+            print(f"[STAGE2 TASK DONE] {model}: Received {chunk_count} chunks, {len(content)} chars", flush=True)
+            model_content[model] = content
+            await queue.put({"type": "stage2_model_complete", "model": model, "ranking": content})
+        except Exception as e:
+            print(f"[STAGE2 TASK ERROR] {model}: {type(e).__name__}: {e}", flush=True)
+            await queue.put({"type": "stage2_model_error", "model": model, "error": str(e)})
+
+    # Start all model streams with staggered delays to avoid rate limiting
+    print(f"[STAGE2] Starting {len(COUNCIL_MODELS)} models: {COUNCIL_MODELS}", flush=True)
+    tasks = []
+    for i, model in enumerate(COUNCIL_MODELS):
+        if i > 0:
+            print(f"[STAGE2] Waiting 2s before starting {model}...", flush=True)
+            await asyncio.sleep(2.0)  # 2 second delay between each model
+        print(f"[STAGE2] Creating task for {model}", flush=True)
+        tasks.append(asyncio.create_task(stream_single_model(model)))
+
+    # Track how many models have completed
+    completed_count = 0
+    total_models = len(COUNCIL_MODELS)
+    print(f"[STAGE2] All {total_models} tasks created, waiting for results...", flush=True)
+
+    # Yield events as they arrive
+    while completed_count < total_models:
+        try:
+            event = await asyncio.wait_for(queue.get(), timeout=0.1)
+            yield event
+
+            if event['type'] in ('stage2_model_complete', 'stage2_model_error'):
+                completed_count += 1
+        except asyncio.TimeoutError:
+            if all(task.done() for task in tasks):
+                while not queue.empty():
+                    event = await queue.get()
+                    yield event
+                    if event['type'] in ('stage2_model_complete', 'stage2_model_error'):
+                        completed_count += 1
+                break
+
+    # Build final results with parsed rankings
+    stage2_results = []
+    for model, content in model_content.items():
+        if content:
+            parsed = parse_ranking_from_text(content)
+            stage2_results.append({
+                "model": model,
+                "ranking": content,
+                "parsed_ranking": parsed
+            })
+
+    # Calculate aggregate rankings
+    aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
+
+    yield {
+        "type": "stage2_all_complete",
+        "data": stage2_results,
+        "label_to_model": label_to_model,
+        "aggregate_rankings": aggregate_rankings
+    }
+
+
+async def stage3_stream_synthesis(
+    user_query: str,
+    stage1_results: List[Dict[str, Any]],
+    stage2_results: List[Dict[str, Any]],
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> AsyncGenerator[Dict[str, Any], None]:
+    """
+    Stage 3 with streaming: Chairman synthesizes final response,
+    yielding tokens as they arrive.
+
+    Yields:
+        Dicts with event type and data
+    """
+    # Build comprehensive context for chairman
+    stage1_text = "\n\n".join([
+        f"Model: {result['model']}\nResponse: {result['response']}"
+        for result in stage1_results
+    ])
+
+    stage2_text = "\n\n".join([
+        f"Model: {result['model']}\nRanking: {result['ranking']}"
+        for result in stage2_results
+    ])
+
+    chairman_prompt = f"""You are the Chairman of an LLM Council. Multiple AI models have provided responses to a user's question, and then ranked each other's responses.
+
+Original Question: {user_query}
+
+STAGE 1 - Individual Responses:
+{stage1_text}
+
+STAGE 2 - Peer Rankings:
+{stage2_text}
+
+Your task as Chairman is to synthesize all of this information into a single, comprehensive, accurate answer to the user's original question. Consider:
+- The individual responses and their insights
+- The peer rankings and what they reveal about response quality
+- Any patterns of agreement or disagreement
+
+Provide a clear, well-reasoned final answer that represents the council's collective wisdom:"""
+
+    # Build messages with optional contexts
+    messages = []
+
+    system_prompt = get_system_prompt_with_context(
+        business_id=business_id,
+        department_id=department_id,
+        channel_id=channel_id,
+        style_id=style_id
+    )
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+
+    messages.append({"role": "user", "content": chairman_prompt})
+
+    # Try each chairman model in order until one succeeds
+    successful_chairman = None
+    final_content = ""
+
+    for chairman_index, chairman_model in enumerate(CHAIRMAN_MODELS):
+        print(f"[STAGE3] Trying chairman {chairman_index + 1}/{len(CHAIRMAN_MODELS)}: {chairman_model}", flush=True)
+
+        content = ""
+        chunk_count = 0
+        had_error = False
+
+        try:
+            async for chunk in query_model_stream(chairman_model, messages):
+                # Check if this is an error message
+                if chunk.startswith("[Error:"):
+                    print(f"[STAGE3] Chairman {chairman_model} returned error: {chunk}", flush=True)
+                    had_error = True
+                    # Try next chairman
+                    break
+
+                chunk_count += 1
+                content += chunk
+                yield {"type": "stage3_token", "model": chairman_model, "content": chunk}
+
+            if not had_error and content and len(content) > 50:  # Successful response
+                print(f"[STAGE3] Chairman {chairman_model} succeeded: {chunk_count} chunks, {len(content)} chars", flush=True)
+                successful_chairman = chairman_model
+                final_content = content
+                break
+            elif not had_error:
+                print(f"[STAGE3] Chairman {chairman_model} returned insufficient content ({len(content)} chars), trying next...", flush=True)
+
+        except Exception as e:
+            print(f"[STAGE3 ERROR] Chairman {chairman_model}: {type(e).__name__}: {e}", flush=True)
+            yield {"type": "stage3_error", "model": chairman_model, "error": str(e)}
+
+        # If not the last chairman, notify we're trying fallback
+        if chairman_index < len(CHAIRMAN_MODELS) - 1:
+            print(f"[STAGE3] Falling back to next chairman...", flush=True)
+            yield {"type": "stage3_fallback", "failed_model": chairman_model, "next_model": CHAIRMAN_MODELS[chairman_index + 1]}
+
+    if not successful_chairman:
+        print(f"[STAGE3] All chairmen failed!", flush=True)
+        final_content = "[Error: All chairman models failed. Please try again.]"
+        successful_chairman = CHAIRMAN_MODELS[0]  # Report as primary for consistency
+
+    yield {
+        "type": "stage3_complete",
+        "data": {
+            "model": successful_chairman,
+            "response": final_content
+        }
+    }
 
 
 async def stage2_collect_rankings(

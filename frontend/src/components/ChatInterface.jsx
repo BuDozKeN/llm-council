@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Stage1 from './Stage1';
 import Stage2 from './Stage2';
 import Stage3 from './Stage3';
+import Triage from './Triage';
 import './ChatInterface.css';
 
 export default function ChatInterface({
   conversation,
   onSendMessage,
+  onStopGeneration,
   isLoading,
   businesses = [],
   selectedBusiness,
@@ -21,21 +24,47 @@ export default function ChatInterface({
   styles = [],
   selectedStyle,
   onSelectStyle,
+  // Triage props
+  triageState,
+  originalQuestion,
+  isTriageLoading,
+  onTriageRespond,
+  onTriageSkip,
+  onTriageProceed,
 }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const userHasScrolledUp = useRef(false);
+
+  // Check if user is near the bottom of the scroll area
+  const isNearBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+    const threshold = 100; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+  };
+
+  // Handle user scroll - track if they've scrolled up
+  const handleScroll = () => {
+    userHasScrolledUp.current = !isNearBottom();
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Only auto-scroll if user hasn't scrolled up
   useEffect(() => {
-    scrollToBottom();
+    if (!userHasScrolledUp.current) {
+      scrollToBottom();
+    }
   }, [conversation]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
+      userHasScrolledUp.current = false; // Reset so new responses auto-scroll
       onSendMessage(input);
       setInput('');
     }
@@ -62,13 +91,33 @@ export default function ChatInterface({
 
   return (
     <div className="chat-interface">
-      <div className="messages-container">
-        {conversation.messages.length === 0 ? (
+      <div className="messages-container" ref={messagesContainerRef} onScroll={handleScroll}>
+        {/* Triage - show at top when active */}
+        {triageState === 'analyzing' && (
+          <div className="triage-analyzing">
+            <div className="spinner"></div>
+            <span>Analyzing your question...</span>
+          </div>
+        )}
+
+        {triageState && triageState !== 'analyzing' && (
+          <Triage
+            triageResult={triageState}
+            originalQuestion={originalQuestion}
+            onRespond={onTriageRespond}
+            onSkip={onTriageSkip}
+            onProceed={onTriageProceed}
+            isLoading={isTriageLoading || isLoading}
+          />
+        )}
+
+        {/* Show empty state only when no triage and no messages */}
+        {conversation.messages.length === 0 && !triageState ? (
           <div className="empty-state">
             <h2>Start a conversation</h2>
             <p>Ask a question to consult the AI Council</p>
           </div>
-        ) : (
+        ) : conversation.messages.length > 0 ? (
           conversation.messages.map((msg, index) => (
             <div key={index} className="message-group">
               {msg.role === 'user' ? (
@@ -76,7 +125,7 @@ export default function ChatInterface({
                   <div className="message-label">You</div>
                   <div className="message-content">
                     <div className="markdown-content">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
@@ -84,55 +133,58 @@ export default function ChatInterface({
                 <div className="assistant-message">
                   <div className="message-label">AI Council</div>
 
-                  {/* Stage 1 */}
-                  {msg.loading?.stage1 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 1: Collecting individual responses...</span>
-                    </div>
-                  )}
-                  {msg.stage1 && <Stage1 responses={msg.stage1} />}
-
-                  {/* Stage 2 */}
-                  {msg.loading?.stage2 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 2: Peer rankings...</span>
-                    </div>
-                  )}
-                  {msg.stage2 && (
-                    <Stage2
-                      rankings={msg.stage2}
-                      labelToModel={msg.metadata?.label_to_model}
-                      aggregateRankings={msg.metadata?.aggregate_rankings}
+                  {/* Stage 1 - show with streaming or final responses */}
+                  {(msg.loading?.stage1 || msg.stage1 || (msg.stage1Streaming && Object.keys(msg.stage1Streaming).length > 0)) && (
+                    <Stage1
+                      responses={msg.stage1}
+                      streaming={msg.stage1Streaming}
+                      isLoading={msg.loading?.stage1}
                     />
                   )}
 
-                  {/* Stage 3 */}
-                  {msg.loading?.stage3 && (
-                    <div className="stage-loading">
-                      <div className="spinner"></div>
-                      <span>Running Stage 3: Final synthesis...</span>
-                    </div>
+                  {/* Stage 2 - show with streaming or final rankings */}
+                  {(msg.loading?.stage2 || msg.stage2 || (msg.stage2Streaming && Object.keys(msg.stage2Streaming).length > 0)) && (
+                    <Stage2
+                      rankings={msg.stage2}
+                      streaming={msg.stage2Streaming}
+                      labelToModel={msg.metadata?.label_to_model}
+                      aggregateRankings={msg.metadata?.aggregate_rankings}
+                      isLoading={msg.loading?.stage2}
+                    />
                   )}
-                  {msg.stage3 && <Stage3 finalResponse={msg.stage3} />}
+
+                  {/* Stage 3 - show with streaming or final response */}
+                  {(msg.loading?.stage3 || msg.stage3 || msg.stage3Streaming) && (
+                    <Stage3
+                      finalResponse={msg.stage3}
+                      streaming={msg.stage3Streaming}
+                      isLoading={msg.loading?.stage3}
+                    />
+                  )}
                 </div>
               )}
             </div>
           ))
-        )}
+        ) : null}
 
         {isLoading && (
           <div className="loading-indicator">
             <div className="spinner"></div>
             <span>Consulting the council...</span>
+            <button
+              className="stop-button-inline"
+              onClick={onStopGeneration}
+            >
+              Stop
+            </button>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {conversation.messages.length === 0 && (
+      {/* Only show input form when no triage is active */}
+      {conversation.messages.length === 0 && !triageState && (
         <form className="input-form" onSubmit={handleSubmit}>
           {/* Row 1: Department & Company */}
           <div className="selector-row">
@@ -224,13 +276,23 @@ export default function ChatInterface({
               disabled={isLoading}
               rows={3}
             />
-            <button
-              type="submit"
-              className="send-button"
-              disabled={!input.trim() || isLoading}
-            >
-              Send
-            </button>
+            {isLoading ? (
+              <button
+                type="button"
+                className="stop-button"
+                onClick={onStopGeneration}
+              >
+                Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="send-button"
+                disabled={!input.trim()}
+              >
+                Send
+              </button>
+            )}
           </div>
         </form>
       )}

@@ -73,16 +73,27 @@ def load_business_context(business_id: str) -> Optional[str]:
         return None
 
 
-def get_system_prompt_with_context(business_id: Optional[str] = None) -> Optional[str]:
+def get_system_prompt_with_context(
+    business_id: Optional[str] = None,
+    department_id: Optional[str] = None,
+    channel_id: Optional[str] = None,
+    style_id: Optional[str] = None
+) -> Optional[str]:
     """
     Generate a system prompt that includes business context.
 
     Args:
         business_id: The business to load context for, or None for no context
+        department_id: Optional department persona (future use)
+        channel_id: Optional channel context (future use)
+        style_id: Optional writing style (future use)
 
     Returns:
         System prompt string with business context, or None if no context
     """
+    # Note: department_id, channel_id, style_id are accepted but not yet implemented
+    # They're included for compatibility with streaming functions
+
     if not business_id:
         return None
 
