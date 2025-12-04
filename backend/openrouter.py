@@ -126,13 +126,19 @@ async def query_model_stream(
                                 break
 
                             delta = data.get('choices', [{}])[0].get('delta', {})
-                            # Check both 'content' and 'reasoning' fields (Gemini uses 'reasoning')
+                            # Capture both 'content' and 'reasoning' fields
+                            # Gemini sends thinking in 'reasoning' and final answer in 'content'
                             content = delta.get('content', '')
-                            if not content:
-                                content = delta.get('reasoning', '')
+                            reasoning = delta.get('reasoning', '')
+
+                            # Yield content if present (the actual answer)
                             if content:
                                 token_count += 1
                                 yield content
+                            # Also yield reasoning if present (Gemini's thinking)
+                            if reasoning:
+                                token_count += 1
+                                yield reasoning
                         except json.JSONDecodeError:
                             print(f"[STREAM JSON ERROR] {model}: Failed to parse: {data_str[:100]}", flush=True)
                             continue
