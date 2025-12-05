@@ -28,6 +28,7 @@ app.add_middleware(
         "http://localhost:5175",
         "http://localhost:5176",
         "http://localhost:3000",
+        "https://ai-council-three.vercel.app",  # Production Vercel
         "https://*.vercel.app",  # Vercel preview deployments
     ],
     allow_credentials=True,
