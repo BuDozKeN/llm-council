@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
+import { computeInlineDiff } from '../utils/diffUtils';
 import './CuratorPanel.css';
 
 /**
@@ -33,6 +34,8 @@ export default function CuratorPanel({
   const [newDeptName, setNewDeptName] = useState('');
   const [newDeptCreating, setNewDeptCreating] = useState(false);
   const [localDepartments, setLocalDepartments] = useState([]); // Newly created departments (not yet in config)
+  // State for tracking fetched current content for "update" type suggestions
+  const [currentContents, setCurrentContents] = useState({}); // { [suggestionIndex]: { content, loading, error } }
 
   // Build department options: Company-wide + dynamic departments + locally created ones
   const departmentOptions = useMemo(() => {
@@ -55,11 +58,52 @@ export default function CuratorPanel({
     return options;
   }, [departments, localDepartments]);
 
-  // Get department display name by ID
+  // Build role-to-department mapping from departments data
+  // This maps role IDs (cto, cmo, etc.) to their parent department and role info
+  const roleMapping = useMemo(() => {
+    const mapping = {};
+    if (departments && departments.length > 0) {
+      departments.forEach(dept => {
+        if (dept.roles && Array.isArray(dept.roles)) {
+          dept.roles.forEach(role => {
+            mapping[role.id] = {
+              roleId: role.id,
+              roleName: role.name,
+              departmentId: dept.id,
+              departmentName: dept.name,
+            };
+          });
+        }
+      });
+    }
+    return mapping;
+  }, [departments]);
+
+  // Get department display name by ID (handles both department IDs and role IDs)
   const getDepartmentLabel = (deptId) => {
     if (!deptId || deptId === 'company') return 'Company-wide';
+
+    // First, check if it's a role ID and map to department
+    if (roleMapping[deptId]) {
+      const role = roleMapping[deptId];
+      return `${role.departmentName} (${role.roleName})`;
+    }
+
+    // Otherwise, look up as department ID
     const dept = departmentOptions.find(d => d.id === deptId);
     return dept ? dept.name : deptId;
+  };
+
+  // Get the actual department ID for a suggestion (maps role IDs to departments)
+  const getActualDepartmentId = (deptId) => {
+    if (!deptId || deptId === 'company') return 'company';
+
+    // If it's a role ID, return the parent department
+    if (roleMapping[deptId]) {
+      return roleMapping[deptId].departmentId;
+    }
+
+    return deptId;
   };
 
   // Fetch curator history and context last updated on mount
@@ -135,33 +179,70 @@ export default function CuratorPanel({
     };
   };
 
-  // Save curator run when closing
+  // Save curator run when closing (updates final counts if user made decisions)
   const handleClose = async () => {
-    // Only save if we actually ran the curator and haven't saved yet
-    if (status === 'done' && !hasSavedRun) {
+    // If user made decisions (accepted/rejected), save an updated record with final counts
+    if (status === 'done' && hasSavedRun) {
       const acceptedCount = suggestions.filter(s => s.status === 'accepted').length;
       const rejectedCount = suggestions.filter(s => s.status === 'rejected').length;
 
-      try {
-        await api.saveCuratorRun(
-          conversationId,
-          businessId,
-          suggestions.length,
-          acceptedCount,
-          rejectedCount
-        );
-        setHasSavedRun(true);
-      } catch (err) {
-        console.error('Failed to save curator run:', err);
+      // Only save if user actually made some decisions
+      if (acceptedCount > 0 || rejectedCount > 0) {
+        try {
+          await api.saveCuratorRun(
+            conversationId,
+            businessId,
+            suggestions.length,
+            acceptedCount,
+            rejectedCount
+          );
+        } catch (err) {
+          console.error('Failed to save curator run with final counts:', err);
+        }
       }
     }
     onClose();
+  };
+
+  // Fetch current content for a specific update suggestion
+  const fetchCurrentContent = async (index, suggestion) => {
+    if (suggestion.type !== 'update' || !suggestion.section) {
+      return;
+    }
+
+    // Mark as loading
+    setCurrentContents(prev => ({
+      ...prev,
+      [index]: { content: null, loading: true, error: null }
+    }));
+
+    try {
+      const dept = getActualDepartmentId(suggestion.department);
+      const result = await api.getContextSection(businessId, suggestion.section, dept);
+
+      setCurrentContents(prev => ({
+        ...prev,
+        [index]: {
+          content: result.content || '',
+          loading: false,
+          error: null,
+          exists: result.exists
+        }
+      }));
+    } catch (err) {
+      console.error('Failed to fetch current content for suggestion', index, err);
+      setCurrentContents(prev => ({
+        ...prev,
+        [index]: { content: null, loading: false, error: err.message }
+      }));
+    }
   };
 
   const startAnalysis = async () => {
     setStatus('analyzing');
     setError(null);
     setSuggestions([]);
+    setCurrentContents({}); // Reset current contents
 
     try {
       const result = await api.curateConversation(
@@ -174,14 +255,39 @@ export default function CuratorPanel({
         setError(result.error);
         setStatus('error');
       } else {
-        // Initialize each suggestion with its recommended department
+        // Initialize each suggestion with:
+        // - originalDepartment: the raw LLM suggestion (may be role ID like "cto")
+        // - selectedDepartment: the actual department ID for the dropdown (mapped from role if needed)
         const suggestionsWithDept = (result.suggestions || []).map(s => ({
           ...s,
-          selectedDepartment: s.department || 'company',
+          originalDepartment: s.department, // Preserve the original LLM suggestion
+          selectedDepartment: getActualDepartmentId(s.department),
         }));
         setSuggestions(suggestionsWithDept);
         setSummary(result.summary || '');
         setStatus('done');
+
+        // Save curator run immediately when analysis completes
+        // This ensures the record is saved even if user refreshes or navigates away
+        try {
+          await api.saveCuratorRun(
+            conversationId,
+            businessId,
+            suggestionsWithDept.length,
+            0, // No suggestions accepted yet
+            0  // No suggestions rejected yet
+          );
+          setHasSavedRun(true);
+        } catch (saveErr) {
+          console.error('Failed to save initial curator run:', saveErr);
+        }
+
+        // Fetch current content for all "update" type suggestions
+        suggestionsWithDept.forEach((s, idx) => {
+          if (s.type === 'update') {
+            fetchCurrentContent(idx, s);
+          }
+        });
       }
     } catch (err) {
       setError(err.message || 'Failed to analyze conversation');
@@ -433,6 +539,56 @@ export default function CuratorPanel({
     return elements;
   };
 
+  // Render inline diff view with red/green highlighting
+  const renderInlineDiff = (index) => {
+    const currentData = currentContents[index];
+
+    // If still loading
+    if (!currentData || currentData.loading) {
+      return (
+        <div className="diff-loading">
+          Loading current content for comparison...
+        </div>
+      );
+    }
+
+    // If there was an error fetching
+    if (currentData.error) {
+      return (
+        <div className="diff-error">
+          Could not load current content: {currentData.error}
+        </div>
+      );
+    }
+
+    const suggestion = suggestions[index];
+    const currentText = stripMarkdown(currentData.content || '');
+    const proposedText = stripMarkdown(suggestion.proposed_text || '');
+
+    // Compute the diff
+    const diffParts = computeInlineDiff(currentText, proposedText);
+
+    return (
+      <div className="diff-view">
+        <div className="diff-legend">
+          <span className="diff-legend-item removed">Removed</span>
+          <span className="diff-legend-item added">Added</span>
+          <span className="diff-legend-item unchanged">Unchanged</span>
+        </div>
+        <div className="diff-content">
+          {diffParts.map((part, idx) => (
+            <span
+              key={idx}
+              className={`diff-part diff-${part.type}`}
+            >
+              {part.value}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // Initial state - show prompt to start analysis
   if (status === 'idle') {
     const historyStatus = getHistoryStatus();
@@ -612,20 +768,31 @@ export default function CuratorPanel({
                           </div>
                         )}
 
-                        {/* Current content (for updates) */}
-                        {suggestion.type === 'update' && suggestion.current_text && (
-                          <div className="suggestion-current">
-                            <div className="content-label">What we currently have:</div>
-                            <div className="content-text">{formatDisplayText(suggestion.current_text)}</div>
+                        {/* Routing warning for potentially misrouted company suggestions */}
+                        {suggestion.routing_warning && (
+                          <div className="routing-warning">
+                            <div className="routing-warning-header">
+                              <span className="routing-warning-icon">⚠️</span>
+                              <span className="routing-warning-title">{suggestion.routing_warning.message}</span>
+                            </div>
+                            <div className="routing-warning-details">
+                              {suggestion.routing_warning.details.map((detail, i) => (
+                                <div key={i} className="routing-warning-detail">{detail}</div>
+                              ))}
+                              {suggestion.routing_warning.suggested_department && (
+                                <div className="routing-warning-suggestion">
+                                  Consider saving to: <strong>{suggestion.routing_warning.suggested_department}</strong>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
 
-                        {/* Proposed content */}
-                        <div className="suggestion-proposed">
-                          <div className="content-label">
-                            {suggestion.type === 'update' ? 'Suggested update:' : 'Suggested addition:'}
-                          </div>
-                          {editingIndex === index ? (
+                        {/* Content display - inline diff for updates, simple view for new additions */}
+                        {editingIndex === index ? (
+                          /* Edit mode - show textarea */
+                          <div className="suggestion-proposed">
+                            <div className="content-label">Edit content:</div>
                             <textarea
                               className="edit-textarea"
                               value={editedText}
@@ -643,10 +810,20 @@ export default function CuratorPanel({
                               }}
                               autoFocus
                             />
-                          ) : (
+                          </div>
+                        ) : suggestion.type === 'update' ? (
+                          /* Update type - show inline diff */
+                          <div className="suggestion-diff-section">
+                            <div className="content-label">Changes to existing content:</div>
+                            {renderInlineDiff(index)}
+                          </div>
+                        ) : (
+                          /* New addition - show proposed content only */
+                          <div className="suggestion-proposed">
+                            <div className="content-label">Suggested addition:</div>
                             <div className="content-text proposed">{formatDisplayText(suggestion.proposed_text)}</div>
-                          )}
-                        </div>
+                          </div>
+                        )}
 
                         {/* Reason - more prominent */}
                         <div className="suggestion-reason-box">
@@ -664,10 +841,11 @@ export default function CuratorPanel({
                                 <span className="recommendation-text">
                                   AI recommends saving to <strong>{getDepartmentLabel(suggestion.department)}</strong>
                                 </span>
-                                {suggestion.selectedDepartment !== suggestion.department && (
+                                {/* Show "Use recommendation" only if user changed from the initial selection */}
+                                {suggestion.selectedDepartment !== getActualDepartmentId(suggestion.originalDepartment || suggestion.department) && (
                                   <button
                                     className="use-recommendation-btn"
-                                    onClick={() => changeDepartment(index, suggestion.department)}
+                                    onClick={() => changeDepartment(index, getActualDepartmentId(suggestion.originalDepartment || suggestion.department))}
                                     disabled={processingIndex !== null}
                                   >
                                     Use recommendation
@@ -731,7 +909,7 @@ export default function CuratorPanel({
                                     {departmentOptions.map(dept => (
                                       <option key={dept.id} value={dept.id}>
                                         {dept.name}
-                                        {suggestion.department === dept.id ? ' (Recommended)' : ''}
+                                        {getActualDepartmentId(suggestion.originalDepartment || suggestion.department) === dept.id ? ' (Recommended)' : ''}
                                       </option>
                                     ))}
                                     <option value="__new__">+ Create new department...</option>

@@ -906,3 +906,151 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Inline Diff View Styles */
+.suggestion-diff-section {
+  margin-bottom: 12px;
+}
+
+.diff-view {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.diff-legend {
+  display: flex;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 12px;
+}
+
+.diff-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diff-legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.diff-legend-item.removed::before {
+  background: #ffcdd2;
+  border: 1px solid #ef9a9a;
+}
+
+.diff-legend-item.added::before {
+  background: #c8e6c9;
+  border: 1px solid #81c784;
+}
+
+.diff-legend-item.unchanged::before {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.diff-content {
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-part {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.diff-part.diff-removed {
+  background: #ffcdd2;
+  color: #b71c1c;
+  text-decoration: line-through;
+}
+
+.diff-part.diff-added {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.diff-part.diff-unchanged {
+  /* Normal text, no special styling */
+}
+
+/* Loading and error states for diff */
+.diff-loading {
+  padding: 16px 18px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+}
+
+.diff-error {
+  padding: 16px 18px;
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+  border-radius: 8px;
+  color: #c62828;
+  font-size: 14px;
+}
+
+/* Routing Warning Styles */
+.routing-warning {
+  background: #fff8e1;
+  border: 1px solid #ffcc02;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.routing-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.routing-warning-icon {
+  font-size: 16px;
+}
+
+.routing-warning-title {
+  font-weight: 600;
+  color: #856404;
+  font-size: 14px;
+}
+
+.routing-warning-details {
+  margin-left: 24px;
+}
+
+.routing-warning-detail {
+  color: #856404;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.routing-warning-suggestion {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #ffcc02;
+  color: #856404;
+  font-size: 13px;
+}
+
+.routing-warning-suggestion strong {
+  color: #5a4100;
+  text-transform: capitalize;
+}

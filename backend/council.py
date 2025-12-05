@@ -50,6 +50,7 @@ async def stage1_stream_responses(
     user_query: str,
     business_id: Optional[str] = None,
     department_id: Optional[str] = None,
+    role_id: Optional[str] = None,
     channel_id: Optional[str] = None,
     style_id: Optional[str] = None,
     conversation_history: Optional[List[Dict[str, str]]] = None
@@ -62,6 +63,7 @@ async def stage1_stream_responses(
         user_query: The user's question
         business_id: Optional business context to load
         department_id: Optional department persona to load
+        role_id: Optional role persona to load (e.g., 'cto', 'head-of-ai-people-culture')
         channel_id: Optional channel context to load
         style_id: Optional writing style to load
         conversation_history: Optional list of previous messages [{"role": "user/assistant", "content": "..."}]
@@ -75,6 +77,7 @@ async def stage1_stream_responses(
     system_prompt = get_system_prompt_with_context(
         business_id=business_id,
         department_id=department_id,
+        role_id=role_id,
         channel_id=channel_id,
         style_id=style_id
     )

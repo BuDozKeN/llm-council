@@ -19,6 +19,7 @@ function App() {
   const [businesses, setBusinesses] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState(null); // null = no department selected
+  const [selectedRole, setSelectedRole] = useState(null); // null = general council, or specific role
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [useCompanyContext, setUseCompanyContext] = useState(true); // Whether to use company context
@@ -43,6 +44,13 @@ function App() {
     return currentBusiness.departments;
   }, [currentBusiness]);
 
+  // Get roles for the selected department (if any)
+  const availableRoles = useMemo(() => {
+    if (!selectedDepartment || !availableDepartments) return [];
+    const dept = availableDepartments.find((d) => d.id === selectedDepartment);
+    return dept?.roles || [];
+  }, [availableDepartments, selectedDepartment]);
+
   // Get channels for the selected department (if any)
   const availableChannels = useMemo(() => {
     if (!selectedDepartment || !availableDepartments) return [];
@@ -64,8 +72,9 @@ function App() {
     setSelectedStyle(null);
   }, [selectedBusiness, businesses]);
 
-  // When department changes, reset channel
+  // When department changes, reset role and channel
   useEffect(() => {
+    setSelectedRole(null);
     setSelectedChannel(null);
   }, [selectedDepartment]);
 
@@ -88,9 +97,9 @@ function App() {
     }
   };
 
-  // Load conversation details when selected
+  // Load conversation details when selected (skip temp conversations)
   useEffect(() => {
-    if (currentConversationId) {
+    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
       loadConversation(currentConversationId);
     }
   }, [currentConversationId]);
@@ -264,11 +273,12 @@ function App() {
     }
   };
 
-  // This is called when user submits a message - starts triage first
+  // This is called when user submits a message - goes directly to council (triage disabled)
   const handleSendMessage = async (content) => {
     if (!currentConversationId) return;
-    // Start triage analysis
-    await handleStartTriage(content);
+    // TRIAGE DISABLED: Go directly to council
+    // To re-enable triage, change this back to: await handleStartTriage(content);
+    await handleSendToCouncil(content);
   };
 
   // This is called after triage is complete (or skipped) to send to council
@@ -322,6 +332,7 @@ function App() {
       }));
 
       // Create a partial assistant message that will be updated progressively
+      // Start with stage1 loading = true immediately so user sees "Waiting for models..." right away
       const assistantMessage = {
         role: 'assistant',
         stage1: null,
@@ -330,7 +341,7 @@ function App() {
         stage3: null,
         metadata: null,
         loading: {
-          stage1: false,
+          stage1: true,  // Start as true so Stage1 shows immediately
           stage2: false,
           stage3: false,
         },
@@ -624,6 +635,7 @@ function App() {
       }, {
         businessId: effectiveBusinessId,
         department: effectiveDepartment,
+        role: selectedRole,
         signal: abortControllerRef.current?.signal,
       });
     } catch (error) {
@@ -806,6 +818,9 @@ function App() {
         departments={availableDepartments}
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
+        roles={availableRoles}
+        selectedRole={selectedRole}
+        onSelectRole={setSelectedRole}
         channels={availableChannels}
         selectedChannel={selectedChannel}
         onSelectChannel={setSelectedChannel}

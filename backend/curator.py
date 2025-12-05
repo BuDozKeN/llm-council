@@ -159,16 +159,62 @@ CONVERSATION TO ANALYZE:
 CURRENT FULL CONTEXT:
 {context_content[:8000]}{'...[truncated]' if len(context_content) > 8000 else ''}
 
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL: COMPANY VS DEPARTMENT ROUTING RULES
+═══════════════════════════════════════════════════════════════════════════════
+
+Think of this like a real company's document hierarchy:
+• Company Context = Board-level information (rarely changes, high importance)
+• Department Context = Team-level information (changes often, operational details)
+
+GOLDEN RULE: When in doubt, route DOWN to a department, not UP to company.
+
+COMPANY CONTEXT ("company") - ONLY for:
+✓ Company identity: Name, mission, vision, core values
+✓ Founder/leadership changes: Who runs the company
+✓ Business model: How the company makes money, pricing strategy changes
+✓ Target market: High-level customer segments (not specific leads)
+✓ Product/service overview: What products exist (not feature details)
+✓ Major strategic pivots: Fundamental direction changes
+✓ Financial milestones: Revenue targets, funding rounds, valuations
+✓ Company-level partnerships: Acquisitions, major strategic alliances
+
+NEVER ADD TO COMPANY CONTEXT:
+✗ Marketing campaigns, content calendars, social media strategies → marketing
+✗ Sales tactics, outreach scripts, pipeline details, lead lists → sales
+✗ Technical implementation, code decisions, architecture details → technology
+✗ Process documentation, workflows, SOPs → operations
+✗ Role-specific information (what CTO/CMO focuses on) → that role's context
+✗ Temporary experiments or short-term tactics → appropriate department
+✗ Meeting notes or conversation summaries → usually don't store at all
+✗ Tool choices or vendor selections → appropriate department
+
+EXAMPLES OF CORRECT ROUTING:
+• "We're pivoting from B2B to B2C" → company (fundamental strategy)
+• "We're running a LinkedIn campaign" → marketing (campaign detail)
+• "We decided to use React for the frontend" → technology (tech decision)
+• "Our new pricing is $99/month" → company (business model)
+• "We're A/B testing email subject lines" → marketing (tactical)
+• "We hired a CMO" → company (leadership change)
+• "The CMO will focus on content marketing" → marketing or CMO role context
+
+═══════════════════════════════════════════════════════════════════════════════
+
 YOUR TASK:
-1. Identify any NEW information from the conversation that should be stored in the knowledge base
+1. Identify any NEW information from the conversation that should be stored
 2. Identify any information that CONTRADICTS or UPDATES existing information
-3. For each finding, determine which DEPARTMENT this belongs to:
-   - "company" = Company-wide information (general strategy, company overview, financials)
-   - "marketing" = Marketing strategies, campaigns, channels, content
-   - "sales" = Sales processes, pipelines, customer acquisition
-   - "cto" = Technical decisions, architecture, development
-   - "operations" = Operations, processes, workflows
+3. Apply the routing rules above STRICTLY - most things go to departments, not company
 4. For each finding, specify the section name and format the proposed_text as CLEAN, READABLE TEXT
+
+DEPARTMENT OPTIONS:
+- "company" = Company-wide (USE SPARINGLY - only board-level info)
+- "executive" = CEO/advisor strategic decisions
+- "technology" = Technical decisions, architecture, development
+- "marketing" = Marketing strategies, campaigns, channels, content
+- "sales" = Sales processes, pipelines, customer acquisition
+- "finance" = Financial operations, accounting, budgets
+- "legal" = Legal matters, compliance, contracts
+- "operations" = Business operations, processes, workflows
 
 FORMATTING RULES FOR proposed_text:
 - Start with a clear TITLE on its own line (e.g., "10.7 AI Departments Strategy")
@@ -187,7 +233,7 @@ Respond in JSON format ONLY. No other text. Use this exact structure:
       "type": "update",
       "department": "company",
       "current_text": "The existing text that needs updating",
-      "proposed_text": "10.7 AI Departments Strategy\n\nWe decided to build virtual AI departments within AxCouncil rather than hiring human staff. The founder will use AxCouncil itself to create internal departments that provide hands-on guidance.\n\nWhy this approach works:\n• Keeps us as a solo founder operation\n• No extra cost beyond what we already pay for AI\n• We get to use our own product every day\n\nThe departments include:\n• Advisory Council for big-picture strategy\n• CTO Council for writing code and technical work\n• CMO Council for marketing copy and campaigns",
+      "proposed_text": "The new text to replace it with",
       "reason": "Why this update is important"
     }},
     {{
@@ -195,7 +241,7 @@ Respond in JSON format ONLY. No other text. Use this exact structure:
       "type": "add",
       "department": "marketing",
       "current_text": null,
-      "proposed_text": "Campaign Strategy Q1 2025\n\nWe're planning to launch an awareness campaign for the AI Council product.\n\nWhere we'll promote it:\n• LinkedIn posts\n• Twitter/X threads\n• YouTube explainer videos\n\nWhat we want people to know:\n• AI helps you make better decisions\n• Less mental load for busy founders",
+      "proposed_text": "Campaign Strategy Q1 2025\n\nWe're planning to launch an awareness campaign for the AI Council product.\n\nWhere we'll promote it:\n• LinkedIn posts\n• Twitter/X threads\n• YouTube explainer videos",
       "reason": "Why this should be added",
       "after_section": "Section Name to insert after"
     }}
@@ -205,12 +251,11 @@ Respond in JSON format ONLY. No other text. Use this exact structure:
 
 If there are no updates needed, return: {{"suggestions": [], "summary": "No actionable updates found in this conversation."}}
 
-Important:
-- Only suggest updates for FACTUAL business information (numbers, dates, strategies, decisions)
-- Do NOT suggest updating general descriptions or static content
-- Focus on information that would become outdated or incorrect if not updated
-- Be conservative - only suggest changes that are clearly warranted by the conversation
-- ALWAYS include the "department" field to indicate where this should be saved"""
+FINAL CHECKLIST before suggesting company context updates:
+□ Would this be discussed at a board meeting? If not → department
+□ Does this affect the company's identity or fundamental strategy? If not → department
+□ Would an investor need to know this? If not → department
+□ Is this operational/tactical? If yes → department"""
 
     # Query the LLM
     messages = [
@@ -278,7 +323,8 @@ Important:
         result['analyzed_at'] = datetime.now().isoformat()
         result['business_id'] = business_id
 
-        # Enrich suggestions with section metadata
+        # Enrich suggestions with section metadata and validate routing
+        validated_suggestions = []
         for suggestion in result.get('suggestions', []):
             # Find matching section
             for section in sections:
@@ -290,6 +336,11 @@ Important:
             # Add last updated info
             suggestion['last_updated'] = last_updated
 
+            # Validate company suggestions - adds routing_warning if misrouted
+            validated_suggestion = validate_company_suggestion(suggestion)
+            validated_suggestions.append(validated_suggestion)
+
+        result['suggestions'] = validated_suggestions
         return result
 
     except json.JSONDecodeError as e:
@@ -299,6 +350,90 @@ Important:
             'raw_response': response['content'][:500],
             'analyzed_at': datetime.now().isoformat()
         }
+
+
+# Role to department mapping - roles are nested within departments
+ROLE_TO_DEPARTMENT = {
+    "cto": "technology",
+    "cmo": "marketing",
+    "cfo": "finance",
+    "coo": "operations",
+    "ceo": "executive",
+    "developer": "technology",
+    "devops": "technology",
+    "content": "marketing",
+    "seo": "marketing",
+    "sales-lead": "sales",
+    "accountant": "finance",
+    "legal-counsel": "legal",
+    "advisor": "executive",
+    "ai-people-culture": "operations",
+    "social-media": "marketing",
+}
+
+
+# Keywords that suggest content should NOT be in company context
+DEPARTMENT_KEYWORDS = {
+    "marketing": [
+        "campaign", "linkedin", "twitter", "social media", "content calendar",
+        "seo", "blog", "post", "audience", "engagement", "followers", "hashtag",
+        "newsletter", "email marketing", "ad spend", "ctr", "impressions"
+    ],
+    "sales": [
+        "pipeline", "lead", "prospect", "outreach", "cold email", "demo",
+        "sales call", "crm", "deal", "quota", "commission", "close rate"
+    ],
+    "technology": [
+        "code", "api", "database", "frontend", "backend", "deploy", "git",
+        "sprint", "bug", "feature", "architecture", "react", "python", "server",
+        "docker", "kubernetes", "aws", "endpoint", "migration"
+    ],
+    "operations": [
+        "process", "workflow", "sop", "checklist", "onboarding", "tool",
+        "vendor", "subscription", "automation"
+    ],
+}
+
+
+def validate_company_suggestion(suggestion: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate if a suggestion marked for company context actually belongs there.
+
+    This is a lightweight safety net - it doesn't block, just adds warnings.
+    The user still has final approval via Accept/Reject.
+
+    Args:
+        suggestion: The suggestion dict with department, proposed_text, etc.
+
+    Returns:
+        The suggestion with optional 'routing_warning' field added
+    """
+    if suggestion.get('department', '').lower() != 'company':
+        return suggestion
+
+    proposed_text = (suggestion.get('proposed_text', '') or '').lower()
+    section = (suggestion.get('section', '') or '').lower()
+    combined_text = f"{proposed_text} {section}"
+
+    # Check for department-specific keywords
+    warnings = []
+    suggested_dept = None
+
+    for dept, keywords in DEPARTMENT_KEYWORDS.items():
+        matches = [kw for kw in keywords if kw in combined_text]
+        if matches:
+            if not suggested_dept:
+                suggested_dept = dept
+            warnings.append(f"Contains {dept} keywords: {', '.join(matches[:3])}")
+
+    if warnings:
+        suggestion['routing_warning'] = {
+            'message': "This might belong in a department context instead of company-wide",
+            'details': warnings,
+            'suggested_department': suggested_dept
+        }
+
+    return suggestion
 
 
 def get_context_file_for_department(business_id: str, department: str) -> Path:
@@ -317,22 +452,63 @@ def get_context_file_for_department(business_id: str, department: str) -> Path:
         return CONTEXTS_DIR / business_id / "context.md"
     else:
         # Department-specific context goes to departments/{dept}/context.md
-        # Map common aliases to proper department IDs
-        dept_mapping = {
-            "cto": "technology",
-            "cmo": "marketing",
-            "cfo": "finance",
-            "coo": "operations",
-            "marketing": "marketing",
-            "sales": "sales",
-            "legal": "legal",
-            "finance": "finance",
-            "technology": "technology",
-            "operations": "operations",
-            "executive": "executive"
-        }
-        dept_id = dept_mapping.get(department.lower(), department.lower())
+        # Map role IDs to their parent department
+        dept_id = ROLE_TO_DEPARTMENT.get(department.lower(), department.lower())
         return CONTEXTS_DIR / business_id / "departments" / dept_id / "context.md"
+
+
+def get_context_file_for_role(business_id: str, role_id: str) -> Optional[Path]:
+    """
+    Get the context file path for a specific role.
+
+    Args:
+        business_id: The business folder name
+        role_id: The role ID (e.g., "cto", "cmo", "developer")
+
+    Returns:
+        Path to the role's context.md file, or None if role not found
+    """
+    role_lower = role_id.lower()
+    if role_lower not in ROLE_TO_DEPARTMENT:
+        return None
+
+    dept_id = ROLE_TO_DEPARTMENT[role_lower]
+    role_path = CONTEXTS_DIR / business_id / "departments" / dept_id / "roles" / f"{role_lower}.md"
+    return role_path
+
+
+def is_role_specific_suggestion(suggestion: Dict[str, Any]) -> bool:
+    """
+    Determine if a suggestion is specifically about a role/persona definition
+    rather than general department knowledge.
+
+    Role-specific suggestions typically update:
+    - Role responsibilities
+    - Required skills
+    - Decision-making authority
+    - Focus areas for the role
+
+    Args:
+        suggestion: The suggestion dict
+
+    Returns:
+        True if this should update the role's context file
+    """
+    department = suggestion.get('department', '').lower()
+    section = suggestion.get('section', '').lower()
+
+    # Check if it's a role ID (not a department ID)
+    if department not in ROLE_TO_DEPARTMENT:
+        return False
+
+    # Check if the section relates to role-specific content
+    role_sections = [
+        'role definition', 'core responsibilities', 'required skills',
+        'current focus areas', 'decision-making authority', 'escalation criteria',
+        'responsibilities', 'skills', 'authority'
+    ]
+
+    return any(rs in section for rs in role_sections)
 
 
 def apply_suggestion(
@@ -349,9 +525,19 @@ def apply_suggestion(
     Returns:
         Dict with 'success' boolean and 'message'
     """
-    # Determine which file to update based on department
+    # Determine which file to update based on department/role
     department = suggestion.get('department', 'company')
-    context_file = get_context_file_for_department(business_id, department)
+
+    # Check if this is a role-specific suggestion
+    if is_role_specific_suggestion(suggestion):
+        role_file = get_context_file_for_role(business_id, department)
+        if role_file and role_file.exists():
+            context_file = role_file
+        else:
+            # Fall back to department context if role file doesn't exist
+            context_file = get_context_file_for_department(business_id, department)
+    else:
+        context_file = get_context_file_for_department(business_id, department)
 
     if not context_file.exists():
         # Create the department context file if it doesn't exist
@@ -476,9 +662,24 @@ def apply_suggestion(
         return {'success': False, 'message': f'Failed to write file: {str(e)}'}
 
 
-def get_section_content(business_id: str, section_name: str) -> Optional[str]:
-    """Get the full content of a specific section."""
-    context_file = CONTEXTS_DIR / business_id / "context.md"
+def get_section_content(business_id: str, section_name: str, department: Optional[str] = None) -> Optional[str]:
+    """
+    Get the full content of a specific section.
+
+    Args:
+        business_id: The business folder name
+        section_name: The section heading to find
+        department: Optional department ID (or role ID which will be mapped)
+
+    Returns:
+        The section content as a string, or None if not found
+    """
+    # Determine which file to read based on department
+    if department and department != 'company':
+        context_file = get_context_file_for_department(business_id, department)
+    else:
+        context_file = CONTEXTS_DIR / business_id / "context.md"
+
     if not context_file.exists():
         return None
 

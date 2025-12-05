@@ -20,6 +20,9 @@ export default function ChatInterface({
   departments = [],
   selectedDepartment,
   onSelectDepartment,
+  roles = [],
+  selectedRole,
+  onSelectRole,
   channels = [],
   selectedChannel,
   onSelectChannel,
@@ -209,12 +212,11 @@ export default function ChatInterface({
                     </>
                   )}
 
-                  {/* Curator Panel - show after Stage 3 is complete, only for last message, and only if business context is enabled */}
+                  {/* Curator Panel - show after Stage 3 is complete, only for last message, when a business is selected */}
                   {index === conversation.messages.length - 1 &&
                     msg.stage3 &&
                     !msg.loading?.stage3 &&
                     selectedBusiness &&
-                    (useCompanyContext || useDepartmentContext) &&
                     !isLoading && (
                       showCurator === index ? (
                         <CuratorPanel
@@ -312,6 +314,24 @@ export default function ChatInterface({
                           </option>
                         ))}
                       </select>
+
+                      {/* Role selector - show when department has roles */}
+                      {selectedDepartment && roles.length > 0 && (
+                        <select
+                          id="role-select"
+                          value={selectedRole || ''}
+                          onChange={(e) => onSelectRole(e.target.value || null)}
+                          disabled={isLoading}
+                          className="context-select role-select"
+                        >
+                          <option value="">All {departments.find(d => d.id === selectedDepartment)?.name || 'Dept'} Roles</option>
+                          {roles.map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {role.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
 
                       {/* Department Context toggle - only when department is selected */}
                       {selectedDepartment && (
@@ -418,6 +438,62 @@ export default function ChatInterface({
                       {dept.name}
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* Role pills - only show when Full Council, department is selected, and department has roles */}
+              {chatMode === 'council' && selectedDepartment && roles.length > 0 && (
+                <div className="role-pills">
+                  <button
+                    type="button"
+                    className={`role-pill ${!selectedRole ? 'active' : ''}`}
+                    onClick={() => !isLoading && onSelectRole(null)}
+                    disabled={isLoading}
+                    title={`Consult all ${departments.find(d => d.id === selectedDepartment)?.name || 'department'} roles`}
+                  >
+                    All Roles
+                  </button>
+                  {roles.map((role) => (
+                    <button
+                      key={role.id}
+                      type="button"
+                      className={`role-pill ${selectedRole === role.id ? 'active' : ''}`}
+                      onClick={() => !isLoading && onSelectRole(role.id)}
+                      disabled={isLoading}
+                      title={`Consult the ${role.name} council`}
+                    >
+                      {role.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Context toggles - show when Full Council mode is selected and a business is selected */}
+              {chatMode === 'council' && selectedBusiness && (
+                <div className="context-toggles-row">
+                  <span className="context-label">Context:</span>
+                  <button
+                    type="button"
+                    className={`context-toggle-btn ${useCompanyContext ? 'active' : ''}`}
+                    onClick={() => !isLoading && onToggleCompanyContext(!useCompanyContext)}
+                    disabled={isLoading}
+                    title="Toggle company-wide context (main company knowledge)"
+                  >
+                    <span className="toggle-icon">{useCompanyContext ? '✓' : '○'}</span>
+                    Company
+                  </button>
+                  {selectedDepartment && (
+                    <button
+                      type="button"
+                      className={`context-toggle-btn ${useDepartmentContext ? 'active' : ''}`}
+                      onClick={() => !isLoading && onToggleDepartmentContext(!useDepartmentContext)}
+                      disabled={isLoading}
+                      title="Toggle department-specific context (department knowledge)"
+                    >
+                      <span className="toggle-icon">{useDepartmentContext ? '✓' : '○'}</span>
+                      {departments.find(d => d.id === selectedDepartment)?.name || 'Dept'}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

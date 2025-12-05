@@ -15,6 +15,7 @@ from .context_loader import list_available_businesses, load_business_context
 from . import leaderboard
 from . import triage
 from . import curator
+from . import org_sync
 
 app = FastAPI(title="LLM Council API")
 
@@ -39,6 +40,7 @@ class SendMessageRequest(BaseModel):
     content: str
     business_id: Optional[str] = None
     department: Optional[str] = "standard"
+    role: Optional[str] = None  # Role ID for persona injection (e.g., 'cto', 'head-of-ai-people-culture')
 
 
 class ChatRequest(BaseModel):
@@ -217,6 +219,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             async for event in stage1_stream_responses(
                 request.content,
                 business_id=request.business_id,
+                department_id=request.department,
+                role_id=request.role,
                 conversation_history=conversation_history if conversation_history else None
             ):
                 if event['type'] == 'stage1_token':
@@ -299,6 +303,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
         }
     )
 
@@ -381,6 +386,7 @@ async def chat_with_chairman(conversation_id: str, request: ChatRequest):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
         }
     )
 
@@ -650,12 +656,19 @@ async def apply_context_suggestion(request: ApplySuggestionRequest):
 
 
 @app.get("/api/context/{business_id}/section/{section_name}")
-async def get_context_section(business_id: str, section_name: str):
-    """Get the full content of a specific section in the business context."""
-    content = curator.get_section_content(business_id, section_name)
+async def get_context_section(business_id: str, section_name: str, department: Optional[str] = None):
+    """Get the full content of a specific section in the business context.
+
+    Args:
+        business_id: The business folder name
+        section_name: The section heading to find
+        department: Optional department ID to look in department-specific context
+    """
+    content = curator.get_section_content(business_id, section_name, department)
     if content is None:
-        raise HTTPException(status_code=404, detail="Section not found")
-    return {"section": section_name, "content": content}
+        # Return empty content instead of 404 - this is expected for new sections
+        return {"section": section_name, "content": "", "exists": False}
+    return {"section": section_name, "content": content, "exists": True}
 
 
 class SaveCuratorRunRequest(BaseModel):
@@ -717,6 +730,47 @@ async def get_context_last_updated(business_id: str):
 
     last_updated = curator.extract_last_updated(content)
     return {"last_updated": last_updated}
+
+
+# Org sync endpoints
+@app.post("/api/businesses/{business_id}/sync-org")
+async def sync_org_structure(business_id: str):
+    """
+    Manually trigger org structure sync from config.json to context.md.
+    This regenerates the auto-generated Organization Structure section.
+    """
+    result = org_sync.sync_org_structure_to_context(business_id)
+
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('message', 'Sync failed'))
+
+    return result
+
+
+class AddRoleRequest(BaseModel):
+    """Request to add a new role to a department."""
+    role_id: str
+    role_name: str
+    role_description: str = ""
+
+
+@app.post("/api/businesses/{business_id}/departments/{department_id}/roles")
+async def add_role_to_department(business_id: str, department_id: str, request: AddRoleRequest):
+    """
+    Add a new role to a department and sync org structure to context.md.
+    """
+    result = org_sync.add_role_to_department(
+        business_id=business_id,
+        department_id=department_id,
+        role_id=request.role_id,
+        role_name=request.role_name,
+        role_description=request.role_description
+    )
+
+    if not result.get('success'):
+        raise HTTPException(status_code=400, detail=result.get('message', 'Failed to add role'))
+
+    return result
 
 
 if __name__ == "__main__":

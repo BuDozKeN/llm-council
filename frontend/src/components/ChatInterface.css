@@ -162,6 +162,23 @@
   min-width: 180px;
 }
 
+/* Role select - distinct styling for persona selection */
+.role-select {
+  min-width: 200px;
+  border-color: #9c27b0;
+  background-color: #faf5fc;
+}
+
+.role-select:hover {
+  border-color: #7b1fa2;
+  background-color: #f3e5f5;
+}
+
+.role-select:focus {
+  border-color: #9c27b0;
+  box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.15);
+}
+
 /* Channel and Style selects */
 .channel-select,
 .style-select {
@@ -557,6 +574,99 @@
 .dept-pill:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* Role pills - distinct purple styling for persona selection */
+.role-pills {
+  display: flex;
+  gap: 4px;
+  background: #f3e5f5;
+  border-radius: 20px;
+  padding: 3px;
+  margin-left: 8px;
+}
+
+.role-pill {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 17px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  color: #7b1fa2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.role-pill:hover {
+  color: #4a148c;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.role-pill.active {
+  background: #fff;
+  color: #9c27b0;
+  box-shadow: 0 1px 3px rgba(156, 39, 176, 0.2);
+}
+
+.role-pill:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Context toggles row - for toggling company/department context in follow-up mode */
+.context-toggles-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-left: 16px;
+  border-left: 1px solid #e0e0e0;
+}
+
+.context-toggles-row .context-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.context-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 14px;
+  background: #fafafa;
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.context-toggle-btn:hover {
+  border-color: #4a90e2;
+  color: #4a90e2;
+}
+
+.context-toggle-btn.active {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-color: #4a90e2;
+  color: #1976d2;
+}
+
+.context-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.context-toggle-btn .toggle-icon {
+  font-size: 10px;
 }
 
 /* Chat response styling - simpler than full council */

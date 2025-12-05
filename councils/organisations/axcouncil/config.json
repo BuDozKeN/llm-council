@@ -5,8 +5,16 @@
       "name": "Executive",
       "description": "Strategic advisory and high-level decision making",
       "roles": [
-        { "id": "ceo", "name": "CEO", "description": "Chief Executive Officer" },
-        { "id": "advisor", "name": "Strategic Advisor", "description": "General strategic guidance" }
+        {
+          "id": "ceo",
+          "name": "CEO",
+          "description": "Chief Executive Officer"
+        },
+        {
+          "id": "advisor",
+          "name": "Strategic Advisor",
+          "description": "General strategic guidance"
+        }
       ]
     },
     {
@@ -14,9 +22,21 @@
       "name": "Technology",
       "description": "Technical execution and development guidance",
       "roles": [
-        { "id": "cto", "name": "CTO", "description": "Chief Technology Officer" },
-        { "id": "developer", "name": "Developer", "description": "Development guidance" },
-        { "id": "devops", "name": "DevOps", "description": "Deployment and infrastructure" }
+        {
+          "id": "cto",
+          "name": "CTO",
+          "description": "Chief Technology Officer"
+        },
+        {
+          "id": "developer",
+          "name": "Developer",
+          "description": "Development guidance"
+        },
+        {
+          "id": "devops",
+          "name": "DevOps",
+          "description": "Deployment and infrastructure"
+        }
       ]
     },
     {
@@ -24,14 +44,40 @@
       "name": "Marketing",
       "description": "Marketing strategy and execution",
       "roles": [
-        { "id": "cmo", "name": "CMO", "description": "Chief Marketing Officer" },
-        { "id": "content", "name": "Content Manager", "description": "Content creation and strategy" },
-        { "id": "seo", "name": "SEO Specialist", "description": "Search engine optimization" }
+        {
+          "id": "cmo",
+          "name": "CMO",
+          "description": "Chief Marketing Officer"
+        },
+        {
+          "id": "content",
+          "name": "Content Manager",
+          "description": "Content creation and strategy"
+        },
+        {
+          "id": "seo",
+          "name": "SEO Specialist",
+          "description": "Search engine optimization"
+        },
+        {
+          "id": "social-media",
+          "name": "Social Media Manager",
+          "description": "Manages social media presence and engagement"
+        }
       ],
       "channels": [
-        { "id": "linkedin", "name": "LinkedIn" },
-        { "id": "x", "name": "X (Twitter)" },
-        { "id": "email", "name": "Email" }
+        {
+          "id": "linkedin",
+          "name": "LinkedIn"
+        },
+        {
+          "id": "x",
+          "name": "X (Twitter)"
+        },
+        {
+          "id": "email",
+          "name": "Email"
+        }
       ]
     },
     {
@@ -39,7 +85,11 @@
       "name": "Sales",
       "description": "Sales strategy and outreach",
       "roles": [
-        { "id": "sales-lead", "name": "Sales Lead", "description": "Sales strategy and execution" }
+        {
+          "id": "sales-lead",
+          "name": "Sales Lead",
+          "description": "Sales strategy and execution"
+        }
       ]
     },
     {
@@ -47,8 +97,16 @@
       "name": "Finance",
       "description": "Financial planning and analysis",
       "roles": [
-        { "id": "cfo", "name": "CFO", "description": "Chief Financial Officer" },
-        { "id": "accountant", "name": "Accountant", "description": "Accounting and bookkeeping" }
+        {
+          "id": "cfo",
+          "name": "CFO",
+          "description": "Chief Financial Officer"
+        },
+        {
+          "id": "accountant",
+          "name": "Accountant",
+          "description": "Accounting and bookkeeping"
+        }
       ]
     },
     {
@@ -56,7 +114,11 @@
       "name": "Legal",
       "description": "Legal compliance and contracts",
       "roles": [
-        { "id": "legal-counsel", "name": "Legal Counsel", "description": "Legal advice and compliance" }
+        {
+          "id": "legal-counsel",
+          "name": "Legal Counsel",
+          "description": "Legal advice and compliance"
+        }
       ]
     },
     {
@@ -64,7 +126,16 @@
       "name": "Operations",
       "description": "Business operations and processes",
       "roles": [
-        { "id": "coo", "name": "COO", "description": "Chief Operations Officer" }
+        {
+          "id": "coo",
+          "name": "COO",
+          "description": "Chief Operations Officer"
+        },
+        {
+          "id": "ai-people-culture",
+          "name": "Head of AI People & Culture",
+          "description": "AI org structure, roles, governance and capability development"
+        }
       ]
     }
   ],

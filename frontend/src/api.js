@@ -88,11 +88,12 @@ export const api = {
    * @param {object} options - Context options
    * @param {string|null} options.businessId - Optional business context ID
    * @param {string|null} options.department - Optional department for leaderboard tracking
+   * @param {string|null} options.role - Optional role for persona injection (e.g., 'cto', 'head-of-ai-people-culture')
    * @param {AbortSignal} options.signal - Optional AbortSignal for cancellation
    * @returns {Promise<void>}
    */
   async sendMessageStream(conversationId, content, onEvent, options = {}) {
-    const { businessId = null, department = 'standard', signal = null } = options;
+    const { businessId = null, department = 'standard', role = null, signal = null } = options;
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
@@ -100,7 +101,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content, business_id: businessId, department }),
+        body: JSON.stringify({ content, business_id: businessId, department, role }),
         signal, // Allow cancellation
       }
     );
@@ -116,9 +117,14 @@ export const api = {
     try {
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log('[SSE Council] Stream ended');
+          break;
+        }
 
-        buffer += decoder.decode(value, { stream: true });
+        const chunk = decoder.decode(value, { stream: true });
+        console.log('[SSE Council] Received chunk:', chunk.length, 'chars');
+        buffer += chunk;
 
         // Process complete SSE events (separated by double newlines)
         while (buffer.includes('\n\n')) {
@@ -132,6 +138,7 @@ export const api = {
               const data = line.slice(6);
               try {
                 const event = JSON.parse(data);
+                console.log('[SSE Council]', event.type, event.model || '');
                 onEvent(event.type, event);
               } catch (e) {
                 console.error('Failed to parse SSE event:', e);
@@ -453,12 +460,15 @@ export const api = {
    * Get a specific section from the business context.
    * @param {string} businessId - The business context ID
    * @param {string} sectionName - The section name to retrieve
-   * @returns {Promise<{section: string, content: string}>}
+   * @param {string|null} department - Optional department ID to look in department context
+   * @returns {Promise<{section: string, content: string, exists: boolean}>}
    */
-  async getContextSection(businessId, sectionName) {
-    const response = await fetch(
-      `${API_BASE}/api/context/${businessId}/section/${encodeURIComponent(sectionName)}`
-    );
+  async getContextSection(businessId, sectionName, department = null) {
+    let url = `${API_BASE}/api/context/${businessId}/section/${encodeURIComponent(sectionName)}`;
+    if (department && department !== 'company') {
+      url += `?department=${encodeURIComponent(department)}`;
+    }
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error('Failed to get context section');
     }

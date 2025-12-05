@@ -241,6 +241,29 @@ def get_department_info(business_id: str, department_id: str) -> Optional[Dict[s
     return None
 
 
+def get_role_info(business_id: str, department_id: str, role_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get role info from the department config.
+
+    Args:
+        business_id: The folder name of the business
+        department_id: The department ID
+        role_id: The role ID
+
+    Returns:
+        Role dict with id, name, description, or None if not found
+    """
+    dept_info = get_department_info(business_id, department_id)
+    if not dept_info:
+        return None
+
+    for role in dept_info.get('roles', []):
+        if role.get('id') == role_id:
+            return role
+
+    return None
+
+
 def get_system_prompt_with_context(
     business_id: Optional[str] = None,
     department_id: Optional[str] = None,
@@ -256,7 +279,7 @@ def get_system_prompt_with_context(
         department_id: Optional department to load specific context for
         channel_id: Optional channel context (future use)
         style_id: Optional writing style (future use)
-        role_id: Optional role within department (future use)
+        role_id: Optional role within department for persona injection
 
     Returns:
         System prompt string with business and department context, or None if no context
@@ -270,8 +293,28 @@ def get_system_prompt_with_context(
     if not company_context:
         return None
 
-    # Build the system prompt
-    system_prompt = """You are an AI advisor participating in an AI Council. You are helping make decisions for a specific business. Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
+    # Check if a specific role is selected for persona injection
+    role_info = None
+    if role_id and department_id:
+        role_info = get_role_info(business_id, department_id, role_id)
+
+    # Build the system prompt - customize intro based on role
+    if role_info:
+        role_name = role_info.get('name', role_id)
+        role_desc = role_info.get('description', '')
+        system_prompt = f"""You are the {role_name} for this company. You are participating in an AI Council as a council of {role_name}s - multiple AI models responding as {role_name}s to give diverse perspectives on the same question.
+
+Your role: {role_desc}
+
+Respond from the perspective of a {role_name}. Focus on the aspects of this question that are most relevant to your role and expertise. Be practical and actionable while staying within your domain of responsibility.
+
+Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
+
+=== COMPANY CONTEXT ===
+
+"""
+    else:
+        system_prompt = """You are an AI advisor participating in an AI Council. You are helping make decisions for a specific business. Read the business context carefully and ensure all your advice is relevant and appropriate for this company's situation, priorities, and constraints.
 
 === COMPANY CONTEXT ===
 
@@ -343,8 +386,13 @@ When responding:
 4. Avoid generic advice that ignores their context
 """
 
-    # Add department-specific guidance if applicable
-    if department_id:
+    # Add role-specific guidance if a specific role is selected
+    if role_info:
+        role_name = role_info.get('name', role_id)
+        system_prompt += f"5. Respond AS the {role_name} - stay in character and focus on your role's responsibilities\n"
+        system_prompt += f"6. Bring your unique perspective as {role_name} to this question\n"
+    # Add department-specific guidance if applicable (but no specific role)
+    elif department_id:
         system_prompt += f"5. Focus your advice from the perspective of the {department_id.replace('-', ' ').title()} department\n"
 
     return system_prompt
@@ -358,6 +406,7 @@ def create_department_for_business(business_id: str, department_id: str, departm
     1. Creates the department folder structure
     2. Creates an initial context.md template
     3. Updates the config.json to include the new department
+    4. Syncs the org structure to context.md
 
     Args:
         business_id: The business folder ID
@@ -371,6 +420,7 @@ def create_department_for_business(business_id: str, department_id: str, departm
         ValueError: If business doesn't exist or department already exists
     """
     from datetime import datetime
+    from .org_sync import sync_org_structure_to_context
 
     business_dir = CONTEXTS_DIR / business_id
 
@@ -431,8 +481,12 @@ def create_department_for_business(business_id: str, department_id: str, departm
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
+    # Sync org structure to context.md
+    sync_result = sync_org_structure_to_context(business_id)
+
     return {
         "success": True,
         "department_id": department_id,
-        "message": f"Department '{department_name}' created successfully"
+        "message": f"Department '{department_name}' created successfully",
+        "org_sync": sync_result.get('success', False)
     }

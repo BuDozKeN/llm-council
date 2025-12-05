@@ -39,7 +39,19 @@ Productise the AI Council deliberation system to give users peer-reviewed, synth
 | Exit | Would sell immediately for $5M (or $2M) |
 
 ### 1.4 Legal Structure
-*To be added*
+12. Decision Log
+
+December 2025 - Hired Head of AI People and Culture
+• Rationale: This is the meta-role that creates all future AI staff, ensures consistency across roles, and enforces the Execution Guidance Standard
+• Status: Pending execution
+
+December 2025 - Hired AI CTO
+• Rationale: Deployment is the single blocker to revenue and the founder has a DevOps gap that was identified in council discussions
+• Status: Pending execution
+
+December 2025 - No Human Hires Policy
+• Rationale: Human hires violate our constraints of minimal budget, time as primary investment, and low risk tolerance
+• Status: Active policy
 
 ---
 
@@ -108,11 +120,15 @@ Build virtual companies with AI departments and roles. Users assemble their own 
 ### 3.4 Constraints
 3.4 Constraints
 
-**Time** - AxCouncil used to run existing businesses; development happens opportunistically
+Time - AxCouncil runs existing businesses and development happens opportunistically
 
-**Budget** - Minimal additional spend; using existing tech stack from current company
+Budget - Minimal additional spend using existing tech stack from current company
 
-**Risk Tolerance** - Low financial risk; primary investment is time
+Risk Tolerance - Low financial risk with primary investment being time
+
+Gaps - DevOps and deployment experience identified as skill gap. This is mitigated by using the CTO Council for step-by-step guidance
+
+No Human Hires - Human employees or contractors ruled out at current stage. AI departments handle all execution guidance instead
 
 **Gaps** - DevOps/deployment experience identified as skill gap; mitigated by using CTO Council for step-by-step guidance
 
@@ -394,6 +410,71 @@ All Council advice must include:
 
 ---
 
+<!-- AUTO-GENERATED: ORGANIZATION STRUCTURE - DO NOT EDIT MANUALLY -->
+
+## 14. Organization Structure
+
+> Auto-synced from config.json on 2025-12-05
+
+### 14.1 Departments & Roles
+
+| Department | Roles |
+|------------|-------|
+| Executive | CEO, Strategic Advisor |
+| Technology | CTO, Developer, DevOps |
+| Marketing | CMO, Content Manager, SEO Specialist, Social Media Manager |
+| Sales | Sales Lead |
+| Finance | CFO, Accountant |
+| Legal | Legal Counsel |
+| Operations | COO, Head of AI People & Culture |
+
+### 14.2 Department Details
+
+**Executive**
+: Strategic advisory and high-level decision making
+
+- **CEO** - Chief Executive Officer
+- **Strategic Advisor** - General strategic guidance
+
+**Technology**
+: Technical execution and development guidance
+
+- **CTO** - Chief Technology Officer
+- **Developer** - Development guidance
+- **DevOps** - Deployment and infrastructure
+
+**Marketing**
+: Marketing strategy and execution
+
+- **CMO** - Chief Marketing Officer
+- **Content Manager** - Content creation and strategy
+- **SEO Specialist** - Search engine optimization
+- **Social Media Manager** - Manages social media presence and engagement
+
+**Sales**
+: Sales strategy and outreach
+
+- **Sales Lead** - Sales strategy and execution
+
+**Finance**
+: Financial planning and analysis
+
+- **CFO** - Chief Financial Officer
+- **Accountant** - Accounting and bookkeeping
+
+**Legal**
+: Legal compliance and contracts
+
+- **Legal Counsel** - Legal advice and compliance
+
+**Operations**
+: Business operations and processes
+
+- **COO** - Chief Operations Officer
+- **Head of AI People & Culture** - AI org structure, roles, governance and capability development
+
+<!-- END AUTO-GENERATED: ORGANIZATION STRUCTURE -->
+
 ## Appendices
 
 ### Appendix A: Glossary
@@ -412,3 +493,41 @@ All Council advice must include:
 ---
 
 *Document maintained by AxCouncil. For updates, add information to the relevant numbered section.*
+
+10.7 AI Organizational Structure
+
+We decided to build AxCouncil using AI departments instead of hiring human staff. This means the founder uses AxCouncil itself to run the company.
+
+Why no human hires:
+• Violates our constraints of minimal budget and low risk tolerance
+• Adding payroll contradicts our solo founder approach
+• Time is our main investment, not money
+
+The AI org chart:
+• CEO - The founder makes decisions and sets priorities
+• Head of AI People and Culture - Creates and maintains all other AI roles
+• AI CTO - Handles technical execution, deployment, and architecture
+• AI CMO - Coming next, will handle marketing execution
+
+Key insight from this decision:
+Before you can have an AI CTO or AI CMO, you need something that defines what each role does and creates their prompts. That is the Head of AI People and Culture. This role solves the question of who builds the builders.
+
+10.8 AI Role Design Standard
+
+Every AI role we create must follow the Execution Guidance Standard. This ensures the founder gets actionable help, not just high-level advice.
+
+What every AI role must do:
+• Assume the founder is a complete beginner in that topic
+• Always provide two paths for substantial tasks
+• Path A is DIY with exact step-by-step commands and instructions
+• Path B is a Freelancer brief with deliverables and budget ready to post on Upwork
+• Include troubleshooting for common errors
+• Be concrete with code samples, commands, templates, and examples
+
+What the Head of AI People and Culture provides for each new role:
+• Role Summary in two to three sentences explaining what they own and why they exist
+• Responsibilities as a bullet list focused on current stage
+• Full System Prompt that is copy-paste ready
+• Success Criteria that are clear and measurable
+• First three tasks to assign immediately
+• Boundaries explaining what they should NOT do

@@ -12,14 +12,18 @@ Business operations and processes for AxCouncil.
 ## Roles
 
 - **COO** - Chief Operations Officer: Operational strategy and execution
+- **Head of AI People & Culture** - Designs AI org structures, defines roles, creates governance frameworks, and develops capability evolution strategies
 
 ## Current Priorities
 
-*To be populated via Knowledge Curator*
+The Operations department focuses on organizational structure and process optimization for AI-augmented teams.
 
-## Processes
+## Key Responsibilities
 
-*To be populated via Knowledge Curator*
+- Define operational processes and workflows across the organization
+- Design AI-human collaboration frameworks and governance
+- Manage capability development and team evolution
+- Ensure operational efficiency across all departments
 
 ## Knowledge Base
 
