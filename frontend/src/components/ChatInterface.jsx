@@ -195,8 +195,8 @@ export default function ChatInterface({
                         <Stage2
                           rankings={msg.stage2}
                           streaming={msg.stage2Streaming}
-                          labelToModel={msg.metadata?.label_to_model}
-                          aggregateRankings={msg.metadata?.aggregate_rankings}
+                          labelToModel={msg.metadata?.label_to_model || msg.label_to_model}
+                          aggregateRankings={msg.metadata?.aggregate_rankings || msg.aggregate_rankings}
                           isLoading={msg.loading?.stage2}
                         />
                       )}
@@ -245,12 +245,6 @@ export default function ChatInterface({
           <div className="loading-indicator">
             <div className="spinner"></div>
             <span>Consulting the council...</span>
-            <button
-              className="stop-button-inline"
-              onClick={onStopGeneration}
-            >
-              Stop
-            </button>
           </div>
         )}
 

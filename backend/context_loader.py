@@ -264,6 +264,30 @@ def get_role_info(business_id: str, department_id: str, role_id: str) -> Optiona
     return None
 
 
+def load_role_context(business_id: str, department_id: str, role_id: str) -> Optional[str]:
+    """
+    Load the context markdown file for a specific role.
+
+    Args:
+        business_id: The folder name of the business
+        department_id: The department ID
+        role_id: The role ID
+
+    Returns:
+        The role context as a string, or None if not found
+    """
+    role_file = CONTEXTS_DIR / business_id / "departments" / department_id / "roles" / f"{role_id}.md"
+
+    if not role_file.exists():
+        return None
+
+    try:
+        return role_file.read_text(encoding='utf-8')
+    except Exception as e:
+        print(f"Error loading role context for {business_id}/{department_id}/{role_id}: {e}")
+        return None
+
+
 def get_system_prompt_with_context(
     business_id: Optional[str] = None,
     department_id: Optional[str] = None,
@@ -295,14 +319,32 @@ def get_system_prompt_with_context(
 
     # Check if a specific role is selected for persona injection
     role_info = None
+    role_context = None
     if role_id and department_id:
         role_info = get_role_info(business_id, department_id, role_id)
+        role_context = load_role_context(business_id, department_id, role_id)
 
     # Build the system prompt - customize intro based on role
     if role_info:
         role_name = role_info.get('name', role_id)
         role_desc = role_info.get('description', '')
-        system_prompt = f"""You are the {role_name} for this company. You are participating in an AI Council as a council of {role_name}s - multiple AI models responding as {role_name}s to give diverse perspectives on the same question.
+
+        # If we have a detailed role context file, use it as the primary prompt
+        if role_context:
+            system_prompt = f"""=== ROLE: {role_name.upper()} ===
+
+You are participating in an AI Council as a council of {role_name}s - multiple AI models responding as {role_name}s to give diverse perspectives on the same question.
+
+{role_context}
+
+=== END ROLE CONTEXT ===
+
+=== COMPANY CONTEXT ===
+
+"""
+        else:
+            # Fallback to basic role prompt if no context file exists
+            system_prompt = f"""You are the {role_name} for this company. You are participating in an AI Council as a council of {role_name}s - multiple AI models responding as {role_name}s to give diverse perspectives on the same question.
 
 Your role: {role_desc}
 

@@ -30,7 +30,7 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
     """
     ensure_data_dir()
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.utcnow().isoformat() + 'Z'
     conversation = {
         "id": conversation_id,
         "created_at": now,
@@ -149,7 +149,7 @@ def add_user_message(conversation_id: str, content: str):
     })
 
     # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat()
+    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
 
     save_conversation(conversation)
 
@@ -158,7 +158,9 @@ def add_assistant_message(
     conversation_id: str,
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
-    stage3: Dict[str, Any]
+    stage3: Dict[str, Any],
+    label_to_model: Optional[Dict[str, str]] = None,
+    aggregate_rankings: Optional[List[Dict[str, Any]]] = None
 ):
     """
     Add an assistant message with all 3 stages to a conversation.
@@ -168,20 +170,30 @@ def add_assistant_message(
         stage1: List of individual model responses
         stage2: List of model rankings
         stage3: Final synthesized response
+        label_to_model: Optional mapping of anonymous labels to model names
+        aggregate_rankings: Optional list of aggregate rankings from peer review
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
         raise ValueError(f"Conversation {conversation_id} not found")
 
-    conversation["messages"].append({
+    message = {
         "role": "assistant",
         "stage1": stage1,
         "stage2": stage2,
         "stage3": stage3
-    })
+    }
+
+    # Add metadata if provided
+    if label_to_model is not None:
+        message["label_to_model"] = label_to_model
+    if aggregate_rankings is not None:
+        message["aggregate_rankings"] = aggregate_rankings
+
+    conversation["messages"].append(message)
 
     # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat()
+    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
 
     save_conversation(conversation)
 
@@ -199,6 +211,8 @@ def update_conversation_title(conversation_id: str, title: str):
         raise ValueError(f"Conversation {conversation_id} not found")
 
     conversation["title"] = title
+    # Update last_updated timestamp
+    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
     save_conversation(conversation)
 
 
@@ -215,6 +229,8 @@ def archive_conversation(conversation_id: str, archived: bool = True):
         raise ValueError(f"Conversation {conversation_id} not found")
 
     conversation["archived"] = archived
+    # Update last_updated timestamp
+    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
     save_conversation(conversation)
 
 
@@ -263,13 +279,15 @@ def save_curator_run(
         conversation["curator_history"] = []
 
     conversation["curator_history"].append({
-        "analyzed_at": datetime.utcnow().isoformat(),
+        "analyzed_at": datetime.utcnow().isoformat() + 'Z',
         "business_id": business_id,
         "suggestions_count": suggestions_count,
         "accepted_count": accepted_count,
         "rejected_count": rejected_count
     })
 
+    # Update last_updated timestamp
+    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
     save_conversation(conversation)
 
 
