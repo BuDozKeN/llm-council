@@ -1,6 +1,6 @@
 # AxCouncil - Business Context
 
-> **Last Updated:** 2025-12-05
+> **Last Updated:** 2025-12-06
 > **Version:** 1.0
 
 ---
@@ -179,9 +179,14 @@ Users currently:
 ## 5. Go-to-Market Strategy
 
 ### 5.1 Reachable in 90 Days
-- Own businesses (primary testing ground)
-- Office contacts who have seen the product
-- Friend with an accounting business (confirmed early adopter)
+5.1 Reachable in 90 Days
+
+Target: localhost to live URL to 10 paying users
+
+People We Can Reach:
+• Own businesses (primary testing ground)
+• Office contacts who have seen the product
+• Friend with an accounting business (confirmed early adopter, first to receive beta access)
 
 ### 5.2 Early Adopters
 | Name/Type | Status | Notes |
@@ -233,28 +238,123 @@ Does not want to go cheap.
 
 ## 7. Technical Stack
 
+> **Last Updated:** 2025-12-06
+
 ### 7.1 Development Environment
-- Claude Code
-- Visual Studio
-- GitHub
+
+| Tool | Purpose |
+|------|---------|
+| Claude Code | AI-assisted development in VS Code |
+| Visual Studio Code | Primary IDE |
+| GitHub | Source control (private repo) |
+| Windows | Development platform |
 
 ### 7.2 Languages & Frameworks
-- Python
-- Markdown
+
+| Component | Technology |
+|-----------|------------|
+| Backend | Python 3.10+ with FastAPI |
+| Frontend | React 19 with Vite |
+| Styling | CSS (light mode theme) |
+| Markdown | Content and documentation |
 
 ### 7.3 LLM Providers
 
 | Provider | Role | Status |
 |----------|------|--------|
-| Open Router | Primary (access to multiple models) | Active |
+| OpenRouter | Primary API (access to multiple models) | Active |
 | Individual API keys | Direct access to each LLM | Available |
-| Fireworks | Alternative | Available |
 
 ### 7.4 Infrastructure
-*To be added*
 
-### 7.5 Third-Party Services
-*To be added*
+| Service | Purpose | Status |
+|---------|---------|--------|
+| Render | Backend hosting (free tier) | Account created, NOT deployed |
+| Supabase | PostgreSQL database | LIVE - connected from localhost |
+| Vercel/Netlify | Frontend hosting | Planned |
+
+### 7.5 Current Architecture (As Built - December 2025)
+
+**Backend Structure (`backend/`)**
+
+| File | Purpose |
+|------|---------|
+| `main.py` | FastAPI app, CORS config, runs on port 8001 |
+| `config.py` | `COUNCIL_MODELS` list, `CHAIRMAN_MODEL`, env vars |
+| `openrouter.py` | `query_model()`, `query_models_parallel()` |
+| `council.py` | 3-stage logic: collect, rank, synthesize |
+| `database.py` | Supabase client connection |
+| `storage.py` | Supabase-based conversation storage (migrated from JSON) |
+| `context_loader.py` | Loads context from `councils/organisations/` |
+
+**Frontend Structure (`frontend/src/`)**
+
+| File | Purpose |
+|------|---------|
+| `App.jsx` | Main orchestration, conversation management |
+| `api.js` | API calls to backend, SSE streaming |
+| `components/ChatInterface.jsx` | Message input with role selection |
+| `components/Stage1.jsx` | Individual model responses (tabs) |
+| `components/Stage2.jsx` | Peer review with de-anonymization |
+| `components/Stage3.jsx` | Chairman synthesis |
+| `components/Sidebar.jsx` | Conversation list |
+
+**Port Configuration**
+- Backend: 8001 (NOT 8000 - conflict avoided)
+- Frontend: 5173 (Vite default)
+
+**Running Locally**
+```bash
+# Backend (from project root)
+python -m backend.main
+
+# Frontend (from frontend/)
+npm run dev
+```
+
+### 7.6 Database Schema (Supabase)
+
+| Table | Purpose |
+|-------|---------|
+| `companies` | Multi-tenant organizations |
+| `departments` | Groups roles by department |
+| `roles` | AI personas with system_prompt |
+| `company_contexts` | Business context markdown |
+| `conversations` | Chat sessions |
+| `messages` | User/assistant messages with stage1/stage2/stage3 JSONB |
+
+### 7.7 The 3-Stage Deliberation Flow
+
+```
+User Query
+    ↓
+Stage 1: Parallel queries to COUNCIL_MODELS → [individual responses]
+    ↓
+Stage 2: Anonymize as "Response A/B/C" → Peer ranking → [evaluations]
+    ↓
+Aggregate Rankings: Calculate average position
+    ↓
+Stage 3: CHAIRMAN_MODEL synthesizes final answer
+    ↓
+Return: {stage1, stage2, stage3, metadata}
+```
+
+### 7.8 Key Technical Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| OpenRouter over direct APIs | Single API for all models, simpler billing |
+| Supabase database (LIVE) | Multi-tenant support, cloud persistence, user auth ready |
+| SSE streaming | Real-time token display for better UX |
+| Anonymized peer review | Prevents model bias in rankings |
+
+### 7.9 Dependencies
+
+**Python (`pyproject.toml`)**
+- fastapi, uvicorn, python-dotenv, httpx, pydantic, supabase, gunicorn
+
+**Frontend (`package.json`)**
+- react, react-dom, react-markdown, remark-gfm, vite
 
 ---
 
@@ -369,6 +469,8 @@ If it works for our own company — running marketing campaigns, writing LinkedI
 |------|----------|-----------|---------|
 | 2025-12-04 | Context document created | Need structured knowledge base for Council | In progress |
 | 2025-12-04 | AI Departments vs Human Hires | Maintains bootstrap constraints, proves product through dogfooding, zero additional cost | Create CTO Council and CMO Council as internal departments |
+| 2025-12-06 | Supabase database migration | Move from JSON files to cloud PostgreSQL for persistence and multi-tenant support | COMPLETE - local backend now connects to Supabase |
+| 2025-12-06 | Disable RLS temporarily | Allow anonymous access during development before user auth is implemented | Active - must enable before production |
 
 ---
 
