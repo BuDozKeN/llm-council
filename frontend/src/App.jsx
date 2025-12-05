@@ -373,23 +373,26 @@ function App() {
 
           case 'stage1_token':
             // Append token to the specific model's streaming text (IMMUTABLE)
+            // Force new array reference to ensure React detects the change
             setCurrentConversation((prev) => {
               const model = event.model;
-              const messages = prev.messages.map((msg, idx) => {
-                if (idx !== prev.messages.length - 1) return msg;
+              const messages = [...prev.messages];
+              const lastIdx = messages.length - 1;
+              if (lastIdx >= 0) {
+                const msg = messages[lastIdx];
                 const currentStreaming = msg.stage1Streaming?.[model] || { text: '', complete: false };
-                return {
+                messages[lastIdx] = {
                   ...msg,
                   stage1Streaming: {
                     ...msg.stage1Streaming,
                     [model]: {
-                      ...currentStreaming,
                       text: currentStreaming.text + event.content,
+                      complete: false,
                     },
                   },
                 };
-              });
-              return { ...prev, messages };
+              }
+              return { ...prev, messages, _streamTick: Date.now() };
             });
             break;
 
@@ -457,23 +460,26 @@ function App() {
 
           case 'stage2_token':
             // Append token to the specific model's stage2 streaming text (IMMUTABLE)
+            // Force new array reference to ensure React detects the change
             setCurrentConversation((prev) => {
               const model = event.model;
-              const messages = prev.messages.map((msg, idx) => {
-                if (idx !== prev.messages.length - 1) return msg;
+              const messages = [...prev.messages];
+              const lastIdx = messages.length - 1;
+              if (lastIdx >= 0) {
+                const msg = messages[lastIdx];
                 const currentStreaming = msg.stage2Streaming?.[model] || { text: '', complete: false };
-                return {
+                messages[lastIdx] = {
                   ...msg,
                   stage2Streaming: {
                     ...msg.stage2Streaming,
                     [model]: {
-                      ...currentStreaming,
                       text: currentStreaming.text + event.content,
+                      complete: false,
                     },
                   },
                 };
-              });
-              return { ...prev, messages };
+              }
+              return { ...prev, messages, _streamTick: Date.now() };
             });
             break;
 
@@ -546,19 +552,22 @@ function App() {
 
           case 'stage3_token':
             // Append token to stage3 streaming text (IMMUTABLE)
+            // Force new array reference to ensure React detects the change
             setCurrentConversation((prev) => {
-              const messages = prev.messages.map((msg, idx) => {
-                if (idx !== prev.messages.length - 1) return msg;
+              const messages = [...prev.messages];
+              const lastIdx = messages.length - 1;
+              if (lastIdx >= 0) {
+                const msg = messages[lastIdx];
                 const currentStreaming = msg.stage3Streaming || { text: '', complete: false };
-                return {
+                messages[lastIdx] = {
                   ...msg,
                   stage3Streaming: {
-                    ...currentStreaming,
                     text: currentStreaming.text + event.content,
+                    complete: false,
                   },
                 };
-              });
-              return { ...prev, messages };
+              }
+              return { ...prev, messages, _streamTick: Date.now() };
             });
             break;
 
