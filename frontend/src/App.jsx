@@ -3,6 +3,8 @@ import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import Leaderboard from './components/Leaderboard';
 import Triage from './components/Triage';
+import Login from './components/Login';
+import { useAuth } from './AuthContext';
 import { api } from './api';
 import './App.css';
 
@@ -12,6 +14,7 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 function App() {
+  const { user, loading: authLoading, signOut, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -32,6 +35,7 @@ function App() {
   const abortControllerRef = useRef(null);
 
   // Get the currently selected business object
+  // IMPORTANT: All hooks must be called before any early returns
   const currentBusiness = useMemo(() => {
     return businesses.find((b) => b.id === selectedBusiness) || null;
   }, [businesses, selectedBusiness]);
@@ -80,9 +84,32 @@ function App() {
 
   // Load conversations and businesses on mount
   useEffect(() => {
-    loadConversations();
-    loadBusinesses();
-  }, []);
+    if (isAuthenticated) {
+      loadConversations();
+      loadBusinesses();
+    }
+  }, [isAuthenticated]);
+
+  // Load conversation details when selected (skip temp conversations)
+  useEffect(() => {
+    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
+      loadConversation(currentConversationId);
+    }
+  }, [currentConversationId]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
 
   const loadBusinesses = async () => {
     try {
@@ -96,13 +123,6 @@ function App() {
       console.error('Failed to load businesses:', error);
     }
   };
-
-  // Load conversation details when selected (skip temp conversations)
-  useEffect(() => {
-    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
-      loadConversation(currentConversationId);
-    }
-  }, [currentConversationId]);
 
   const loadConversations = async () => {
     try {
@@ -814,6 +834,8 @@ function App() {
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         departments={availableDepartments}
+        user={user}
+        onSignOut={signOut}
       />
       <ChatInterface
         conversation={currentConversation}

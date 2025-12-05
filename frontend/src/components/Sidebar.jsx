@@ -39,6 +39,8 @@ export default function Sidebar({
   onDeleteConversation,
   onRenameConversation,
   departments = [],
+  user,
+  onSignOut,
 }) {
   const [filter, setFilter] = useState('all');
   const [expandedGroups, setExpandedGroups] = useState({});
@@ -353,6 +355,20 @@ export default function Sidebar({
           })
         )}
       </div>
+
+      {/* User Footer */}
+      {user && (
+        <div className="sidebar-footer">
+          <div className="user-info">
+            <span className="user-email" title={user.email}>
+              {user.email}
+            </span>
+          </div>
+          <button className="sign-out-btn" onClick={onSignOut} title="Sign out">
+            Sign Out
+          </button>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
