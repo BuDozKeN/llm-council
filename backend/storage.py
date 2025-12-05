@@ -1,21 +1,29 @@
-"""JSON-based storage for conversations."""
+"""Supabase-based storage for conversations."""
 
-import json
-import os
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-from pathlib import Path
-from .config import DATA_DIR
+from .database import get_supabase
+
+# Default company ID for AxCouncil (cached after first lookup)
+_default_company_id: Optional[str] = None
 
 
-def ensure_data_dir():
-    """Ensure the data directory exists."""
-    Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
-
-
-def get_conversation_path(conversation_id: str) -> str:
-    """Get the file path for a conversation."""
-    return os.path.join(DATA_DIR, f"{conversation_id}.json")
+def get_default_company_id() -> str:
+    """Get or lookup the default company ID (AxCouncil)."""
+    global _default_company_id
+    if _default_company_id is None:
+        supabase = get_supabase()
+        result = supabase.table('companies').select('id').eq('slug', 'axcouncil').execute()
+        if result.data:
+            _default_company_id = result.data[0]['id']
+        else:
+            # If AxCouncil doesn't exist, create it
+            result = supabase.table('companies').insert({
+                'name': 'AxCouncil',
+                'slug': 'axcouncil'
+            }).execute()
+            _default_company_id = result.data[0]['id']
+    return _default_company_id
 
 
 def create_conversation(conversation_id: str) -> Dict[str, Any]:
@@ -28,23 +36,31 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
     Returns:
         New conversation dict
     """
-    ensure_data_dir()
-
+    supabase = get_supabase()
     now = datetime.utcnow().isoformat() + 'Z'
-    conversation = {
+    company_id = get_default_company_id()
+
+    # Insert into conversations table
+    result = supabase.table('conversations').insert({
+        'id': conversation_id,
+        'company_id': company_id,
+        'title': 'New Conversation',
+        'created_at': now,
+        'updated_at': now,
+        'archived': False
+    }).execute()
+
+    if not result.data:
+        raise Exception(f"Failed to create conversation {conversation_id}")
+
+    # Return in the format the app expects
+    return {
         "id": conversation_id,
         "created_at": now,
         "last_updated": now,
         "title": "New Conversation",
         "messages": []
     }
-
-    # Save to file
-    path = get_conversation_path(conversation_id)
-    with open(path, 'w') as f:
-        json.dump(conversation, f, indent=2)
-
-    return conversation
 
 
 def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
@@ -57,76 +73,101 @@ def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
     Returns:
         Conversation dict or None if not found
     """
-    path = get_conversation_path(conversation_id)
+    supabase = get_supabase()
 
-    if not os.path.exists(path):
+    # Get conversation
+    conv_result = supabase.table('conversations').select('*').eq('id', conversation_id).execute()
+
+    if not conv_result.data:
         return None
 
-    with open(path, 'r') as f:
-        return json.load(f)
+    conv = conv_result.data[0]
+
+    # Get messages for this conversation
+    msg_result = supabase.table('messages').select('*').eq('conversation_id', conversation_id).order('created_at').execute()
+
+    messages = []
+    for msg in msg_result.data or []:
+        if msg['role'] == 'user':
+            messages.append({
+                "role": "user",
+                "content": msg['content']
+            })
+        else:
+            # Assistant message
+            message = {
+                "role": "assistant",
+                "stage1": msg.get('stage1') or [],
+                "stage2": msg.get('stage2') or [],
+                "stage3": msg.get('stage3') or {}
+            }
+            if msg.get('label_to_model'):
+                message['label_to_model'] = msg['label_to_model']
+            if msg.get('aggregate_rankings'):
+                message['aggregate_rankings'] = msg['aggregate_rankings']
+            messages.append(message)
+
+    return {
+        "id": conv['id'],
+        "created_at": conv['created_at'],
+        "last_updated": conv['updated_at'],
+        "title": conv.get('title', 'New Conversation'),
+        "archived": conv.get('archived', False),
+        "messages": messages,
+        "curator_history": conv.get('curator_history') or []
+    }
 
 
 def save_conversation(conversation: Dict[str, Any]):
     """
     Save a conversation to storage.
+    Note: This is mainly for updating metadata. Messages are saved separately.
 
     Args:
         conversation: Conversation dict to save
     """
-    ensure_data_dir()
+    supabase = get_supabase()
 
-    path = get_conversation_path(conversation['id'])
-    with open(path, 'w') as f:
-        json.dump(conversation, f, indent=2)
+    supabase.table('conversations').update({
+        'title': conversation.get('title', 'New Conversation'),
+        'updated_at': conversation.get('updated_at', datetime.utcnow().isoformat() + 'Z'),
+        'archived': conversation.get('archived', False),
+        'curator_history': conversation.get('curator_history')
+    }).eq('id', conversation['id']).execute()
 
 
 def list_conversations() -> List[Dict[str, Any]]:
     """
     List all conversations with at least one message (metadata only).
-    Empty conversations (0 messages) are excluded and deleted.
 
     Returns:
         List of conversation metadata dicts, sorted by last_updated (newest first)
     """
-    ensure_data_dir()
+    supabase = get_supabase()
+
+    # Get all conversations with message counts
+    result = supabase.table('conversations').select('*').order('updated_at', desc=True).execute()
 
     conversations = []
-    empty_files = []
+    for conv in result.data or []:
+        # Count messages for this conversation
+        msg_count_result = supabase.table('messages').select('id', count='exact').eq('conversation_id', conv['id']).execute()
+        message_count = msg_count_result.count or 0
 
-    for filename in os.listdir(DATA_DIR):
-        if filename.endswith('.json'):
-            path = os.path.join(DATA_DIR, filename)
-            with open(path, 'r') as f:
-                data = json.load(f)
-                message_count = len(data["messages"])
+        # Skip conversations with 0 messages
+        if message_count == 0:
+            # Delete empty conversations
+            supabase.table('conversations').delete().eq('id', conv['id']).execute()
+            continue
 
-                # Skip and mark for deletion conversations with 0 messages
-                if message_count == 0:
-                    empty_files.append(path)
-                    continue
-
-                # Fallback to created_at if last_updated doesn't exist (for older conversations)
-                last_updated = data.get("last_updated", data["created_at"])
-
-                # Return metadata only for conversations with messages
-                conversations.append({
-                    "id": data["id"],
-                    "created_at": data["created_at"],
-                    "last_updated": last_updated,
-                    "title": data.get("title", "New Conversation"),
-                    "message_count": message_count,
-                    "archived": data.get("archived", False)
-                })
-
-    # Clean up empty conversation files
-    for path in empty_files:
-        try:
-            os.remove(path)
-        except Exception as e:
-            print(f"Failed to delete empty conversation file {path}: {e}")
-
-    # Sort by last_updated time, newest first
-    conversations.sort(key=lambda x: x["last_updated"], reverse=True)
+        conversations.append({
+            "id": conv['id'],
+            "created_at": conv['created_at'],
+            "last_updated": conv['updated_at'],
+            "title": conv.get('title', 'New Conversation'),
+            "message_count": message_count,
+            "archived": conv.get('archived', False)
+        })
 
     return conversations
 
@@ -139,19 +180,21 @@ def add_user_message(conversation_id: str, content: str):
         conversation_id: Conversation identifier
         content: User message content
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    supabase = get_supabase()
+    now = datetime.utcnow().isoformat() + 'Z'
 
-    conversation["messages"].append({
-        "role": "user",
-        "content": content
-    })
+    # Insert message
+    supabase.table('messages').insert({
+        'conversation_id': conversation_id,
+        'role': 'user',
+        'content': content,
+        'created_at': now
+    }).execute()
 
-    # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-
-    save_conversation(conversation)
+    # Update conversation last_updated
+    supabase.table('conversations').update({
+        'updated_at': now
+    }).eq('id', conversation_id).execute()
 
 
 def add_assistant_message(
@@ -173,29 +216,31 @@ def add_assistant_message(
         label_to_model: Optional mapping of anonymous labels to model names
         aggregate_rankings: Optional list of aggregate rankings from peer review
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    supabase = get_supabase()
+    now = datetime.utcnow().isoformat() + 'Z'
 
-    message = {
-        "role": "assistant",
-        "stage1": stage1,
-        "stage2": stage2,
-        "stage3": stage3
+    # Build message data
+    message_data = {
+        'conversation_id': conversation_id,
+        'role': 'assistant',
+        'stage1': stage1,
+        'stage2': stage2,
+        'stage3': stage3,
+        'created_at': now
     }
 
-    # Add metadata if provided
     if label_to_model is not None:
-        message["label_to_model"] = label_to_model
+        message_data['label_to_model'] = label_to_model
     if aggregate_rankings is not None:
-        message["aggregate_rankings"] = aggregate_rankings
+        message_data['aggregate_rankings'] = aggregate_rankings
 
-    conversation["messages"].append(message)
+    # Insert message
+    supabase.table('messages').insert(message_data).execute()
 
-    # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-
-    save_conversation(conversation)
+    # Update conversation last_updated
+    supabase.table('conversations').update({
+        'updated_at': now
+    }).eq('id', conversation_id).execute()
 
 
 def update_conversation_title(conversation_id: str, title: str):
@@ -206,14 +251,13 @@ def update_conversation_title(conversation_id: str, title: str):
         conversation_id: Conversation identifier
         title: New title for the conversation
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    supabase = get_supabase()
+    now = datetime.utcnow().isoformat() + 'Z'
 
-    conversation["title"] = title
-    # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-    save_conversation(conversation)
+    supabase.table('conversations').update({
+        'title': title,
+        'updated_at': now
+    }).eq('id', conversation_id).execute()
 
 
 def archive_conversation(conversation_id: str, archived: bool = True):
@@ -224,14 +268,13 @@ def archive_conversation(conversation_id: str, archived: bool = True):
         conversation_id: Conversation identifier
         archived: True to archive, False to unarchive
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+    supabase = get_supabase()
+    now = datetime.utcnow().isoformat() + 'Z'
 
-    conversation["archived"] = archived
-    # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-    save_conversation(conversation)
+    supabase.table('conversations').update({
+        'archived': archived,
+        'updated_at': now
+    }).eq('id', conversation_id).execute()
 
 
 def delete_conversation(conversation_id: str) -> bool:
@@ -244,12 +287,19 @@ def delete_conversation(conversation_id: str) -> bool:
     Returns:
         True if deleted, False if not found
     """
-    path = get_conversation_path(conversation_id)
+    supabase = get_supabase()
 
-    if not os.path.exists(path):
+    # Check if exists
+    result = supabase.table('conversations').select('id').eq('id', conversation_id).execute()
+    if not result.data:
         return False
 
-    os.remove(path)
+    # Delete messages first (foreign key constraint)
+    supabase.table('messages').delete().eq('conversation_id', conversation_id).execute()
+
+    # Delete conversation
+    supabase.table('conversations').delete().eq('id', conversation_id).execute()
+
     return True
 
 
@@ -270,25 +320,28 @@ def save_curator_run(
         accepted_count: Number of suggestions accepted
         rejected_count: Number of suggestions rejected
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
+    supabase = get_supabase()
+    now = datetime.utcnow().isoformat() + 'Z'
+
+    # Get current conversation
+    result = supabase.table('conversations').select('curator_history').eq('id', conversation_id).execute()
+
+    if not result.data:
         raise ValueError(f"Conversation {conversation_id} not found")
 
-    # Store curator history
-    if "curator_history" not in conversation:
-        conversation["curator_history"] = []
-
-    conversation["curator_history"].append({
-        "analyzed_at": datetime.utcnow().isoformat() + 'Z',
+    curator_history = result.data[0].get('curator_history') or []
+    curator_history.append({
+        "analyzed_at": now,
         "business_id": business_id,
         "suggestions_count": suggestions_count,
         "accepted_count": accepted_count,
         "rejected_count": rejected_count
     })
 
-    # Update last_updated timestamp
-    conversation["last_updated"] = datetime.utcnow().isoformat() + 'Z'
-    save_conversation(conversation)
+    supabase.table('conversations').update({
+        'curator_history': curator_history,
+        'updated_at': now
+    }).eq('id', conversation_id).execute()
 
 
 def get_curator_history(conversation_id: str) -> Optional[List[Dict[str, Any]]]:
@@ -301,8 +354,11 @@ def get_curator_history(conversation_id: str) -> Optional[List[Dict[str, Any]]]:
     Returns:
         List of curator run records or None if conversation not found
     """
-    conversation = get_conversation(conversation_id)
-    if conversation is None:
+    supabase = get_supabase()
+
+    result = supabase.table('conversations').select('curator_history').eq('id', conversation_id).execute()
+
+    if not result.data:
         return None
 
-    return conversation.get("curator_history", [])
+    return result.data[0].get('curator_history') or []
