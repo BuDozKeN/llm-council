@@ -383,22 +383,53 @@ Return: {stage1, stage2, stage3, metadata}
 
 | Metric | Target | Timeframe |
 |--------|--------|-----------|
-| MRR | $10,000 USD | 12 months |
+| Paying users | 10 | 90 days |
+| MRR | €1,000 | 90 days |
+| MRR | €10,000 | 12 months |
 
 ### 9.2 Current Revenue
 $0 (pre-launch)
 
-### 9.3 Costs
-| Item | Cost | Frequency |
-|------|------|-----------|
-| Open Router API | Variable | Per use |
-| *Other costs TBD* | | |
+### 9.3 Budget Philosophy
 
-### 9.4 Exit Criteria
+**Core Principle:** We invest time, not money. But if spending money delivers clear ROI or saves significant time, it's worth considering.
+
+**Decision Framework:**
+- Prefer free/cheap tiers for infrastructure (<€20/month total hosting)
+- Freelancers only if task would block progress for 6+ hours AND cannot be simplified
+- Any spend >€50 requires explicit ROI justification
+- **Always propose paid solutions if they offer good ROI** — the founder wants to know all options
+
+**What "Good ROI" Means:**
+- Saves more than 4 hours of founder time
+- Unblocks a critical path to revenue
+- Significantly improves user experience
+- Enables scaling that couldn't happen otherwise
+
+### 9.4 Current Costs
+
+| Item | Cost | Frequency | Status |
+|------|------|-----------|--------|
+| Render (Backend) | Free tier | Monthly | LIVE |
+| Vercel (Frontend) | Free tier | Monthly | LIVE |
+| Supabase (Database) | Free tier | Monthly | LIVE |
+| OpenRouter API | Variable (~$0.01-0.10/query) | Per use | Active |
+| Claude Code | ~$20 | Monthly | Active |
+
+**Total Fixed Monthly:** ~€20
+
+### 9.5 Freelancer Guidelines
+
+When a task would take >6 hours AND can't be simplified:
+- **Budget range:** $50-$200 per task
+- **Platform:** Upwork
+- **Include:** Clear deliverables, acceptance criteria, budget
+
+### 9.6 Exit Criteria
 - Would sell for $5M immediately
 - Would also accept $2M
 
-### 9.5 What Makes It "Worth It"
+### 9.7 What Makes It "Worth It"
 If it works for our own company — running marketing campaigns, writing LinkedIn posts, getting solid outputs through AxCouncil departments.
 
 ---
@@ -487,15 +518,24 @@ If it works for our own company — running marketing campaigns, writing LinkedI
 - **Bilingual advantage**: Spanish and English markets accessible
 - **Technical capability**: Can build features directly, not dependent on developers
 - **Risk-averse**: Prefers low-risk, validated approaches
-- **Lifestyle goal**: $10K/month is success, not hypergrowth
+- **Lifestyle goal**: €10K/month is success, not hypergrowth
 
-### 13.2 Communication Preferences
+### 13.2 Budget Guidance for All Roles
+
+**Important:** All budget details are in **Section 9.3 (Budget Philosophy)**. Key points:
+
+1. **Always propose paid solutions if ROI is good** — the founder wants to know ALL options
+2. Don't self-censor solutions just because they cost money
+3. If a €50 spend saves 10 hours, that's excellent ROI — propose it
+4. Frame paid options with clear ROI justification (time saved, revenue enabled, risk reduced)
+
+### 13.3 Communication Preferences
 *To be added*
 
-### 13.3 Decision-Making Style
+### 13.4 Decision-Making Style
 *To be added*
 
-### 13.4 Execution Guidance Standard
+### 13.5 Execution Guidance Standard
 
 **Status:** Decided (2025-12-04)
 
