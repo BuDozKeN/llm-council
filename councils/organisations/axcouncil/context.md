@@ -410,13 +410,19 @@ $0 (pre-launch)
 
 | Item | Cost | Frequency | Status |
 |------|------|-----------|--------|
+| **Infrastructure** | | | |
 | Render (Backend) | $7/month (Starter) | Monthly | LIVE |
 | Vercel (Frontend) | Free tier | Monthly | LIVE |
 | Supabase (Database) | Free tier | Monthly | LIVE |
 | OpenRouter API | Variable (~$0.01-0.10/query) | Per use | Active |
-| Claude Code | ~$20 | Monthly | Active |
+| **AI Subscriptions** | | | |
+| Claude (Max Tier) | $100/month | Monthly | Active |
+| ChatGPT (Basic) | $20/month | Monthly | Active |
+| Grok (Basic AI) | $8/month | Monthly | Active |
 
-**Total Fixed Monthly:** ~€27 ($7 Render + ~$20 Claude Code)
+**Total Fixed Monthly:** ~$135 (~€125)
+- Infrastructure: $7
+- AI Subscriptions: $128
 
 ### 9.5 Freelancer Guidelines
 
