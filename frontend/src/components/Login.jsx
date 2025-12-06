@@ -1,16 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
 import './Login.css';
 
 export default function Login() {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState('signIn'); // 'signIn', 'signUp', 'forgotPassword', 'resetPassword'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword, updatePassword, authEvent } = useAuth();
+
+  // Handle PASSWORD_RECOVERY event from magic link
+  useEffect(() => {
+    if (authEvent === 'PASSWORD_RECOVERY') {
+      setMode('resetPassword');
+      setMessage('Please enter your new password.');
+    }
+  }, [authEvent]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,11 +28,28 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (mode === 'signUp') {
         await signUp(email, password);
         setMessage('Check your email to confirm your account!');
-      } else {
+      } else if (mode === 'signIn') {
         await signIn(email, password);
+      } else if (mode === 'forgotPassword') {
+        await resetPassword(email);
+        setMessage('Check your email for a password reset link!');
+      } else if (mode === 'resetPassword') {
+        if (password !== confirmPassword) {
+          setError('Passwords do not match');
+          setLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters');
+          setLoading(false);
+          return;
+        }
+        await updatePassword(password);
+        setMessage('Password updated successfully! You are now signed in.');
+        setMode('signIn');
       }
     } catch (err) {
       setError(err.message);
@@ -32,62 +58,143 @@ export default function Login() {
     }
   };
 
+  const getTitle = () => {
+    switch (mode) {
+      case 'signUp': return 'Create an account';
+      case 'forgotPassword': return 'Reset your password';
+      case 'resetPassword': return 'Set new password';
+      default: return 'Sign in to continue';
+    }
+  };
+
+  const getButtonText = () => {
+    if (loading) return 'Loading...';
+    switch (mode) {
+      case 'signUp': return 'Sign Up';
+      case 'forgotPassword': return 'Send Reset Link';
+      case 'resetPassword': return 'Update Password';
+      default: return 'Sign In';
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-box">
         <h1 className="login-title">AI Council</h1>
-        <p className="login-subtitle">
-          {isSignUp ? 'Create an account' : 'Sign in to continue'}
-        </p>
+        <p className="login-subtitle">{getTitle()}</p>
 
         <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
+          {mode !== 'resetPassword' && (
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+          )}
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-              required
-              minLength={6}
-            />
-          </div>
+          {(mode === 'signIn' || mode === 'signUp' || mode === 'resetPassword') && (
+            <div className="form-group">
+              <label htmlFor="password">
+                {mode === 'resetPassword' ? 'New Password' : 'Password'}
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === 'resetPassword' ? 'Enter new password' : 'Your password'}
+                required
+                minLength={6}
+              />
+            </div>
+          )}
+
+          {mode === 'resetPassword' && (
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                required
+                minLength={6}
+              />
+            </div>
+          )}
 
           {error && <div className="error-message">{error}</div>}
           {message && <div className="success-message">{message}</div>}
 
           <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+            {getButtonText()}
           </button>
         </form>
 
         <div className="login-footer">
-          <button
-            type="button"
-            className="toggle-button"
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError('');
-              setMessage('');
-            }}
-          >
-            {isSignUp
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Sign up"}
-          </button>
+          {mode === 'signIn' && (
+            <>
+              <button
+                type="button"
+                className="toggle-button"
+                onClick={() => {
+                  setMode('forgotPassword');
+                  setError('');
+                  setMessage('');
+                }}
+              >
+                Forgot password?
+              </button>
+              <button
+                type="button"
+                className="toggle-button"
+                onClick={() => {
+                  setMode('signUp');
+                  setError('');
+                  setMessage('');
+                }}
+              >
+                Don't have an account? Sign up
+              </button>
+            </>
+          )}
+
+          {mode === 'signUp' && (
+            <button
+              type="button"
+              className="toggle-button"
+              onClick={() => {
+                setMode('signIn');
+                setError('');
+                setMessage('');
+              }}
+            >
+              Already have an account? Sign in
+            </button>
+          )}
+
+          {(mode === 'forgotPassword' || mode === 'resetPassword') && (
+            <button
+              type="button"
+              className="toggle-button"
+              onClick={() => {
+                setMode('signIn');
+                setError('');
+                setMessage('');
+                setPassword('');
+                setConfirmPassword('');
+              }}
+            >
+              Back to sign in
+            </button>
+          )}
         </div>
       </div>
     </div>
