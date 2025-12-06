@@ -26,12 +26,13 @@ def get_default_company_id() -> str:
     return _default_company_id
 
 
-def create_conversation(conversation_id: str) -> Dict[str, Any]:
+def create_conversation(conversation_id: str, user_id: str) -> Dict[str, Any]:
     """
     Create a new conversation.
 
     Args:
         conversation_id: Unique identifier for the conversation
+        user_id: ID of the user creating the conversation
 
     Returns:
         New conversation dict
@@ -40,10 +41,11 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
     now = datetime.utcnow().isoformat() + 'Z'
     company_id = get_default_company_id()
 
-    # Insert into conversations table
+    # Insert into conversations table with user_id
     result = supabase.table('conversations').insert({
         'id': conversation_id,
         'company_id': company_id,
+        'user_id': user_id,
         'title': 'New Conversation',
         'created_at': now,
         'updated_at': now,
@@ -59,7 +61,8 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
         "created_at": now,
         "last_updated": now,
         "title": "New Conversation",
-        "messages": []
+        "messages": [],
+        "user_id": user_id
     }
 
 
@@ -114,7 +117,8 @@ def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
         "title": conv.get('title', 'New Conversation'),
         "archived": conv.get('archived', False),
         "messages": messages,
-        "curator_history": conv.get('curator_history') or []
+        "curator_history": conv.get('curator_history') or [],
+        "user_id": conv.get('user_id')
     }
 
 
@@ -136,17 +140,20 @@ def save_conversation(conversation: Dict[str, Any]):
     }).eq('id', conversation['id']).execute()
 
 
-def list_conversations() -> List[Dict[str, Any]]:
+def list_conversations(user_id: str) -> List[Dict[str, Any]]:
     """
-    List all conversations with at least one message (metadata only).
+    List all conversations for a specific user with at least one message (metadata only).
+
+    Args:
+        user_id: ID of the user to list conversations for
 
     Returns:
         List of conversation metadata dicts, sorted by last_updated (newest first)
     """
     supabase = get_supabase()
 
-    # Get all conversations with message counts
-    result = supabase.table('conversations').select('*').order('updated_at', desc=True).execute()
+    # Get all conversations for this user
+    result = supabase.table('conversations').select('*').eq('user_id', user_id).order('updated_at', desc=True).execute()
 
     conversations = []
     for conv in result.data or []:
@@ -172,22 +179,24 @@ def list_conversations() -> List[Dict[str, Any]]:
     return conversations
 
 
-def add_user_message(conversation_id: str, content: str):
+def add_user_message(conversation_id: str, content: str, user_id: str):
     """
     Add a user message to a conversation.
 
     Args:
         conversation_id: Conversation identifier
         content: User message content
+        user_id: ID of the user sending the message
     """
     supabase = get_supabase()
     now = datetime.utcnow().isoformat() + 'Z'
 
-    # Insert message
+    # Insert message with user_id
     supabase.table('messages').insert({
         'conversation_id': conversation_id,
         'role': 'user',
         'content': content,
+        'user_id': user_id,
         'created_at': now
     }).execute()
 
@@ -202,6 +211,7 @@ def add_assistant_message(
     stage1: List[Dict[str, Any]],
     stage2: List[Dict[str, Any]],
     stage3: Dict[str, Any],
+    user_id: str,
     label_to_model: Optional[Dict[str, str]] = None,
     aggregate_rankings: Optional[List[Dict[str, Any]]] = None
 ):
@@ -213,19 +223,21 @@ def add_assistant_message(
         stage1: List of individual model responses
         stage2: List of model rankings
         stage3: Final synthesized response
+        user_id: ID of the user who owns this conversation
         label_to_model: Optional mapping of anonymous labels to model names
         aggregate_rankings: Optional list of aggregate rankings from peer review
     """
     supabase = get_supabase()
     now = datetime.utcnow().isoformat() + 'Z'
 
-    # Build message data
+    # Build message data with user_id
     message_data = {
         'conversation_id': conversation_id,
         'role': 'assistant',
         'stage1': stage1,
         'stage2': stage2,
         'stage3': stage3,
+        'user_id': user_id,
         'created_at': now
     }
 

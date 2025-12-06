@@ -1,6 +1,6 @@
 # Executive Department Context
 
-> **Last Updated:** 2025-12-06
+> **Last Updated:** 2025-12-06 (Security Hardening Complete)
 > **Organisation:** AxCouncil
 
 ---
@@ -20,40 +20,51 @@ Strategic advisory and high-level decision making for AxCouncil.
 |-----------|--------|-------|
 | AI Council Platform | LIVE | https://ai-council-three.vercel.app |
 | User Authentication | COMPLETE | Email/password + password recovery |
-| Database | LIVE | Supabase PostgreSQL |
+| Security Hardening | COMPLETE | JWT auth, RLS, user data isolation |
+| Database | LIVE | Supabase PostgreSQL with RLS enabled |
 | Multi-LLM Council | ACTIVE | 5 models deliberating on queries |
 
-## Recent Milestone: Authentication Complete (2025-12-06)
+## Recent Milestone: Security Hardening Complete (2025-12-06)
 
-The platform now requires user login to access. Features implemented:
-- Sign up with email/password
-- Sign in with existing credentials
-- "Forgot password?" with email recovery link
-- Password reset functionality
-- Session persistence across browser refreshes
+The CTO Council's 7-step security plan has been fully implemented:
+
+1. **Database Layer:** Added `user_id` columns to conversations and messages tables
+2. **Backend Auth:** Created JWT verification utility (`backend/auth.py`)
+3. **Storage Layer:** Updated all storage functions with user_id filtering
+4. **API Routes:** All endpoints now require valid JWT tokens
+5. **Frontend:** API calls automatically include auth headers
+6. **Row Level Security:** RLS policies enabled (users only see own data)
+7. **Data Migration:** Existing conversations backfilled with user ownership
+
+**What this means:**
+- Users are fully isolated - cannot see each other's conversations
+- Security enforced at BOTH API and database levels
+- Platform is ready for additional users
 
 ## Strategic Priorities
 
 ### Immediate (Next Session)
-1. **User Isolation** - Each user should only see their own conversations
-2. **API Security** - Backend endpoints need authentication
-3. **RLS (Row Level Security)** - Database security before public launch
+1. **User Invitations** - System to invite early adopters
+2. **Onboarding Flow** - First-time user experience
+3. **Usage Analytics** - Track engagement metrics
 
 ### Near-term
-- User onboarding flow
-- Invitation system for new users
-- Usage analytics/dashboard
-
-### Future Considerations
 - Team/organization accounts
 - Role-based access control
-- Billing integration
+- Billing integration (Stripe)
 
-## Key Decisions Pending for CTO Council
+### Future Considerations
+- Rate limiting for API protection
+- Audit logging
+- GDPR compliance features
 
-1. Should we implement user isolation before inviting more users?
-2. What's the priority order: security fixes vs. new features?
-3. Do we need a staging environment for testing?
+## Key Decisions Resolved
+
+| Decision | Resolution | Date |
+|----------|-----------|------|
+| User isolation before more users? | YES - Implemented | 2025-12-06 |
+| Security fixes vs. new features? | Security first - DONE | 2025-12-06 |
+| Staging environment? | Deferred - not critical yet | 2025-12-06 |
 
 ---
 

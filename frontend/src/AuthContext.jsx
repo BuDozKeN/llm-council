@@ -80,6 +80,12 @@ export function AuthProvider({ children }) {
     setNeedsPasswordReset(false);
   };
 
+  const getAccessToken = async () => {
+    if (!supabase) return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  };
+
   const value = {
     user,
     loading,
@@ -90,6 +96,7 @@ export function AuthProvider({ children }) {
     signOut,
     resetPassword,
     updatePassword,
+    getAccessToken,
     isAuthenticated: !!user,
   };
 

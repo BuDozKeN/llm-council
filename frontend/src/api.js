@@ -4,6 +4,33 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
+// Token getter function - set by the app to provide auth tokens
+let getAccessToken = null;
+
+/**
+ * Set the function that retrieves the access token.
+ * @param {function} getter - Async function that returns the access token
+ */
+export const setTokenGetter = (getter) => {
+  getAccessToken = getter;
+};
+
+/**
+ * Get headers including Authorization if token is available.
+ */
+const getAuthHeaders = async () => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (getAccessToken) {
+    const token = await getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+};
+
 export const api = {
   /**
    * List all available business contexts.
@@ -17,10 +44,11 @@ export const api = {
   },
 
   /**
-   * List all conversations.
+   * List all conversations for the authenticated user.
    */
   async listConversations() {
-    const response = await fetch(`${API_BASE}/api/conversations`);
+    const headers = await getAuthHeaders();
+    const response = await fetch(`${API_BASE}/api/conversations`, { headers });
     if (!response.ok) {
       throw new Error('Failed to list conversations');
     }
@@ -31,11 +59,10 @@ export const api = {
    * Create a new conversation.
    */
   async createConversation() {
+    const headers = await getAuthHeaders();
     const response = await fetch(`${API_BASE}/api/conversations`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({}),
     });
     if (!response.ok) {
@@ -48,8 +75,10 @@ export const api = {
    * Get a specific conversation.
    */
   async getConversation(conversationId) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
-      `${API_BASE}/api/conversations/${conversationId}`
+      `${API_BASE}/api/conversations/${conversationId}`,
+      { headers }
     );
     if (!response.ok) {
       throw new Error('Failed to get conversation');
@@ -64,13 +93,12 @@ export const api = {
    * @param {string|null} businessId - Optional business context ID
    */
   async sendMessage(conversationId, content, businessId = null) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ content, business_id: businessId }),
       }
     );
@@ -94,13 +122,12 @@ export const api = {
    */
   async sendMessageStream(conversationId, content, onEvent, options = {}) {
     const { businessId = null, department = 'standard', role = null, signal = null } = options;
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/message/stream`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ content, business_id: businessId, department, role }),
         signal, // Allow cancellation
       }
@@ -170,13 +197,12 @@ export const api = {
    */
   async sendChatStream(conversationId, content, onEvent, options = {}) {
     const { businessId = null, departmentId = null, signal = null } = options;
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/chat/stream`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           content,
           business_id: businessId,
@@ -316,8 +342,10 @@ export const api = {
    * @returns {Promise<void>} - Triggers a file download
    */
   async exportConversation(conversationId) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
-      `${API_BASE}/api/conversations/${conversationId}/export`
+      `${API_BASE}/api/conversations/${conversationId}/export`,
+      { headers }
     );
     if (!response.ok) {
       throw new Error('Failed to export conversation');
@@ -351,13 +379,12 @@ export const api = {
    * @param {string} title - The new title
    */
   async renameConversation(conversationId, title) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/rename`,
       {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ title }),
       }
     );
@@ -373,13 +400,12 @@ export const api = {
    * @param {boolean} archived - True to archive, false to unarchive
    */
   async archiveConversation(conversationId, archived = true) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/archive`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ archived }),
       }
     );
@@ -394,10 +420,12 @@ export const api = {
    * @param {string} conversationId - The conversation ID
    */
   async deleteConversation(conversationId) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}`,
       {
         method: 'DELETE',
+        headers,
       }
     );
     if (!response.ok) {
@@ -414,13 +442,12 @@ export const api = {
    * @returns {Promise<{suggestions: Array, summary: string, analyzed_at: string}>}
    */
   async curateConversation(conversationId, businessId, departmentId = null) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/curate`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           business_id: businessId,
           department_id: departmentId,
@@ -485,13 +512,12 @@ export const api = {
    * @returns {Promise<{success: boolean}>}
    */
   async saveCuratorRun(conversationId, businessId, suggestionsCount, acceptedCount, rejectedCount) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}/curator-history`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           business_id: businessId,
           suggestions_count: suggestionsCount,
@@ -512,8 +538,10 @@ export const api = {
    * @returns {Promise<{history: Array}>}
    */
   async getCuratorHistory(conversationId) {
+    const headers = await getAuthHeaders();
     const response = await fetch(
-      `${API_BASE}/api/conversations/${conversationId}/curator-history`
+      `${API_BASE}/api/conversations/${conversationId}/curator-history`,
+      { headers }
     );
     if (!response.ok) {
       throw new Error('Failed to get curator history');

@@ -1,6 +1,6 @@
 """FastAPI backend for LLM Council."""
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
@@ -12,6 +12,7 @@ import asyncio
 from . import storage
 from .council import run_full_council, generate_conversation_title, stage1_collect_responses, stage1_stream_responses, stage2_collect_rankings, stage2_stream_rankings, stage3_synthesize_final, stage3_stream_synthesis, calculate_aggregate_rankings, chat_stream_response
 from .context_loader import list_available_businesses, load_business_context
+from .auth import get_current_user
 from . import leaderboard
 from . import triage
 from . import curator
@@ -29,8 +30,8 @@ app.add_middleware(
         "http://localhost:5176",
         "http://localhost:3000",
         "https://ai-council-three.vercel.app",  # Production Vercel
-        "https://*.vercel.app",  # Vercel preview deployments
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",  # Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,30 +113,33 @@ async def create_department(business_id: str, request: CreateDepartmentRequest):
 
 
 @app.get("/api/conversations", response_model=List[ConversationMetadata])
-async def list_conversations():
-    """List all conversations (metadata only)."""
-    return storage.list_conversations()
+async def list_conversations(user: dict = Depends(get_current_user)):
+    """List all conversations for the authenticated user (metadata only)."""
+    return storage.list_conversations(user["id"])
 
 
 @app.post("/api/conversations", response_model=Conversation)
-async def create_conversation(request: CreateConversationRequest):
-    """Create a new conversation."""
+async def create_conversation(request: CreateConversationRequest, user: dict = Depends(get_current_user)):
+    """Create a new conversation for the authenticated user."""
     conversation_id = str(uuid.uuid4())
-    conversation = storage.create_conversation(conversation_id)
+    conversation = storage.create_conversation(conversation_id, user["id"])
     return conversation
 
 
 @app.get("/api/conversations/{conversation_id}", response_model=Conversation)
-async def get_conversation(conversation_id: str):
-    """Get a specific conversation with all its messages."""
+async def get_conversation(conversation_id: str, user: dict = Depends(get_current_user)):
+    """Get a specific conversation with all its messages (must be owner)."""
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
     return conversation
 
 
 @app.post("/api/conversations/{conversation_id}/message")
-async def send_message(conversation_id: str, request: SendMessageRequest):
+async def send_message(conversation_id: str, request: SendMessageRequest, user: dict = Depends(get_current_user)):
     """
     Send a message and run the 3-stage council process.
     Returns the complete response with all stages.
@@ -145,11 +149,15 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
 
-    # Add user message
-    storage.add_user_message(conversation_id, request.content)
+    # Add user message with user_id
+    storage.add_user_message(conversation_id, request.content, user["id"])
 
     # If this is the first message, generate a title
     if is_first_message:
@@ -168,6 +176,7 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         stage1_results,
         stage2_results,
         stage3_result,
+        user["id"],
         label_to_model=metadata.get('label_to_model'),
         aggregate_rankings=metadata.get('aggregate_rankings')
     )
@@ -182,7 +191,7 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
 
 
 @app.post("/api/conversations/{conversation_id}/message/stream")
-async def send_message_stream(conversation_id: str, request: SendMessageRequest):
+async def send_message_stream(conversation_id: str, request: SendMessageRequest, user: dict = Depends(get_current_user)):
     """
     Send a message and stream the 3-stage council process.
     Returns Server-Sent Events as each stage completes.
@@ -192,8 +201,15 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
+
+    # Capture user_id for use in generator
+    user_id = user["id"]
 
     # Build conversation history from existing messages (for follow-up council queries)
     conversation_history = []
@@ -215,8 +231,8 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
 
     async def event_generator():
         try:
-            # Add user message
-            storage.add_user_message(conversation_id, request.content)
+            # Add user message with user_id
+            storage.add_user_message(conversation_id, request.content, user_id)
 
             # Start title generation in parallel (don't await yet)
             title_task = None
@@ -289,6 +305,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 stage1_results,
                 stage2_results,
                 stage3_result,
+                user_id,
                 label_to_model=label_to_model,
                 aggregate_rankings=aggregate_rankings
             )
@@ -313,15 +330,16 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
+            "Transfer-Encoding": "chunked",  # Force chunked encoding
         }
     )
 
 
 @app.post("/api/conversations/{conversation_id}/chat/stream")
-async def chat_with_chairman(conversation_id: str, request: ChatRequest):
+async def chat_with_chairman(conversation_id: str, request: ChatRequest, user: dict = Depends(get_current_user)):
     """
     Send a follow-up chat message and stream a response from the Chairman only.
     Used for iterating on council advice without running full deliberation.
@@ -330,6 +348,13 @@ async def chat_with_chairman(conversation_id: str, request: ChatRequest):
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Capture user_id for use in generator
+    user_id = user["id"]
 
     async def event_generator():
         try:
@@ -358,8 +383,8 @@ async def chat_with_chairman(conversation_id: str, request: ChatRequest):
                 "content": request.content
             })
 
-            # Also save the user message to storage
-            storage.add_user_message(conversation_id, request.content)
+            # Also save the user message to storage with user_id
+            storage.add_user_message(conversation_id, request.content, user_id)
 
             yield f"data: {json.dumps({'type': 'chat_start'})}\n\n"
 
@@ -384,7 +409,8 @@ async def chat_with_chairman(conversation_id: str, request: ChatRequest):
                 conversation_id,
                 stage1=[],  # No stage 1 for chat mode
                 stage2=[],  # No stage 2 for chat mode
-                stage3={"model": "chat", "response": full_content}
+                stage3={"model": "chat", "response": full_content},
+                user_id=user_id
             )
 
             yield f"data: {json.dumps({'type': 'complete'})}\n\n"
@@ -396,9 +422,10 @@ async def chat_with_chairman(conversation_id: str, request: ChatRequest):
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx/proxy buffering
+            "Transfer-Encoding": "chunked",  # Force chunked encoding
         }
     )
 
@@ -463,11 +490,15 @@ class RenameRequest(BaseModel):
 
 
 @app.patch("/api/conversations/{conversation_id}/rename")
-async def rename_conversation(conversation_id: str, request: RenameRequest):
-    """Rename a conversation."""
+async def rename_conversation(conversation_id: str, request: RenameRequest, user: dict = Depends(get_current_user)):
+    """Rename a conversation (must be owner)."""
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     storage.update_conversation_title(conversation_id, request.title)
     return {"success": True, "title": request.title}
@@ -480,19 +511,31 @@ class ArchiveRequest(BaseModel):
 
 
 @app.post("/api/conversations/{conversation_id}/archive")
-async def archive_conversation(conversation_id: str, request: ArchiveRequest):
-    """Archive or unarchive a conversation."""
+async def archive_conversation(conversation_id: str, request: ArchiveRequest, user: dict = Depends(get_current_user)):
+    """Archive or unarchive a conversation (must be owner)."""
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     storage.archive_conversation(conversation_id, request.archived)
     return {"success": True, "archived": request.archived}
 
 
 @app.delete("/api/conversations/{conversation_id}")
-async def delete_conversation(conversation_id: str):
-    """Permanently delete a conversation."""
+async def delete_conversation(conversation_id: str, user: dict = Depends(get_current_user)):
+    """Permanently delete a conversation (must be owner)."""
+    conversation = storage.get_conversation(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     success = storage.delete_conversation(conversation_id)
     if not success:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -520,14 +563,18 @@ async def get_department_leaderboard(department: str):
 
 # Export endpoint
 @app.get("/api/conversations/{conversation_id}/export")
-async def export_conversation_markdown(conversation_id: str):
+async def export_conversation_markdown(conversation_id: str, user: dict = Depends(get_current_user)):
     """
-    Export a conversation as a formatted Markdown file.
+    Export a conversation as a formatted Markdown file (must be owner).
     Returns the markdown content with proper headers and formatting.
     """
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     # Build the markdown content
     md_lines = []
@@ -632,14 +679,18 @@ class ApplySuggestionRequest(BaseModel):
 
 
 @app.post("/api/conversations/{conversation_id}/curate")
-async def curate_conversation(conversation_id: str, request: CurateRequest):
+async def curate_conversation(conversation_id: str, request: CurateRequest, user: dict = Depends(get_current_user)):
     """
-    Analyze a conversation and suggest updates to the business context.
+    Analyze a conversation and suggest updates to the business context (must be owner).
     Returns a list of suggestions with section info, current text, and proposed updates.
     """
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     result = await curator.analyze_conversation_for_updates(
         conversation=conversation,
@@ -692,14 +743,18 @@ class SaveCuratorRunRequest(BaseModel):
 
 
 @app.post("/api/conversations/{conversation_id}/curator-history")
-async def save_curator_run(conversation_id: str, request: SaveCuratorRunRequest):
+async def save_curator_run(conversation_id: str, request: SaveCuratorRunRequest, user: dict = Depends(get_current_user)):
     """
-    Record that the curator was run on this conversation.
+    Record that the curator was run on this conversation (must be owner).
     Stores when it was run and the results.
     """
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     storage.save_curator_run(
         conversation_id=conversation_id,
@@ -713,14 +768,18 @@ async def save_curator_run(conversation_id: str, request: SaveCuratorRunRequest)
 
 
 @app.get("/api/conversations/{conversation_id}/curator-history")
-async def get_curator_history(conversation_id: str):
+async def get_curator_history(conversation_id: str, user: dict = Depends(get_current_user)):
     """
-    Get curator run history for a conversation.
+    Get curator run history for a conversation (must be owner).
     Returns list of previous curator runs with timestamps and results.
     """
     conversation = storage.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    # Verify ownership
+    if conversation.get("user_id") and conversation.get("user_id") != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     history = storage.get_curator_history(conversation_id)
     return {"history": history or []}

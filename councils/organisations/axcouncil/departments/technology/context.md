@@ -1,6 +1,6 @@
 # Technology Department Context
 
-> **Last Updated:** 2025-12-06 (Authentication System Complete)
+> **Last Updated:** 2025-12-06 (Security Hardening Complete)
 > **Organisation:** AxCouncil
 
 ---
@@ -100,22 +100,41 @@ OPENROUTER_API_KEY=<openrouter-key>
 | Supabase Migration | COMPLETE | Moved from JSON files to PostgreSQL |
 | Production Deployment | COMPLETE | Frontend on Vercel, Backend on Render |
 | User Authentication | COMPLETE | Supabase Auth with email/password and password recovery |
-| Multi-tenant (per-user data) | NOT STARTED | Currently all users see all conversations |
-| API Authorization | NOT STARTED | Backend endpoints not protected by auth tokens |
+| Security Hardening | COMPLETE | JWT auth, RLS policies, user data isolation |
+| Multi-tenant (per-user data) | COMPLETE | Users only see their own conversations |
+| API Authorization | COMPLETE | All endpoints require valid JWT token |
 
 ## Security Notes
 
-**Current State:**
-- RLS (Row Level Security) is DISABLED on Supabase tables
-- Using anon key for database access
-- Backend API endpoints are NOT authenticated
-- All authenticated users see all conversations (no user isolation)
+**Current State (Post-Hardening):**
+- Row Level Security (RLS) ENABLED on `conversations` and `messages` tables
+- All API endpoints require JWT authentication via Supabase
+- Users can only access their own data (enforced at both API and database level)
+- Backend uses service role key for database access
+- Frontend automatically attaches auth tokens to all API requests
 
-**Before Public Launch:**
-- Enable RLS on all Supabase tables
-- Add user_id filtering to conversations
-- Protect backend API with Supabase JWT verification
-- Consider rate limiting
+**Security Implementation (Session: 2025-12-06):**
+
+1. **Database Layer:**
+   - Added `user_id` columns (uuid type) to `conversations` and `messages` tables
+   - Enabled RLS with policies: SELECT, INSERT, UPDATE, DELETE all check `auth.uid() = user_id`
+   - Backfilled existing data with user ownership
+
+2. **Backend Layer:**
+   - Created `backend/auth.py` with `get_current_user()` dependency
+   - All conversation endpoints now require authentication
+   - Ownership verification on every operation (403 if not owner)
+   - Storage functions now require and store `user_id`
+
+3. **Frontend Layer:**
+   - Added `getAccessToken()` to AuthContext
+   - Created `setTokenGetter()` in api.js for token injection
+   - All API calls include `Authorization: Bearer <token>` header
+
+**Remaining Security Considerations:**
+- Rate limiting (not implemented - consider for public launch)
+- API key rotation strategy
+- Audit logging for sensitive operations
 
 ## Recent Commits (Auth Implementation)
 

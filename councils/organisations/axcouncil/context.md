@@ -269,9 +269,9 @@ Does not want to go cheap.
 
 | Service | Purpose | Status |
 |---------|---------|--------|
-| Render | Backend hosting (free tier) | Account created, NOT deployed |
-| Supabase | PostgreSQL database | LIVE - connected from localhost |
-| Vercel/Netlify | Frontend hosting | Planned |
+| Render | Backend hosting | LIVE |
+| Supabase | PostgreSQL database + Auth | LIVE with RLS enabled |
+| Vercel | Frontend hosting | LIVE |
 
 ### 7.5 Current Architecture (As Built - December 2025)
 
@@ -470,7 +470,8 @@ If it works for our own company — running marketing campaigns, writing LinkedI
 | 2025-12-04 | Context document created | Need structured knowledge base for Council | In progress |
 | 2025-12-04 | AI Departments vs Human Hires | Maintains bootstrap constraints, proves product through dogfooding, zero additional cost | Create CTO Council and CMO Council as internal departments |
 | 2025-12-06 | Supabase database migration | Move from JSON files to cloud PostgreSQL for persistence and multi-tenant support | COMPLETE - local backend now connects to Supabase |
-| 2025-12-06 | Disable RLS temporarily | Allow anonymous access during development before user auth is implemented | Active - must enable before production |
+| 2025-12-06 | Disable RLS temporarily | Allow anonymous access during development before user auth is implemented | REVERSED - RLS now enabled |
+| 2025-12-06 | Security Hardening | Implement JWT auth, RLS policies, user data isolation | COMPLETE - all 7 steps done |
 
 ---
 

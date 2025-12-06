@@ -5,7 +5,7 @@ import Leaderboard from './components/Leaderboard';
 import Triage from './components/Triage';
 import Login from './components/Login';
 import { useAuth } from './AuthContext';
-import { api } from './api';
+import { api, setTokenGetter } from './api';
 import './App.css';
 
 // Default departments when no company is selected or company has no departments
@@ -14,7 +14,15 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 function App() {
-  const { user, loading: authLoading, signOut, isAuthenticated, needsPasswordReset } = useAuth();
+  const { user, loading: authLoading, signOut, isAuthenticated, needsPasswordReset, getAccessToken } = useAuth();
+
+  // Set up API token getter when auth is available
+  useEffect(() => {
+    if (getAccessToken) {
+      setTokenGetter(getAccessToken);
+    }
+  }, [getAccessToken]);
+
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
