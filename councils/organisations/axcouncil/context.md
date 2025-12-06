@@ -410,13 +410,13 @@ $0 (pre-launch)
 
 | Item | Cost | Frequency | Status |
 |------|------|-----------|--------|
-| Render (Backend) | Free tier | Monthly | LIVE |
+| Render (Backend) | $7/month (Starter) | Monthly | LIVE |
 | Vercel (Frontend) | Free tier | Monthly | LIVE |
 | Supabase (Database) | Free tier | Monthly | LIVE |
 | OpenRouter API | Variable (~$0.01-0.10/query) | Per use | Active |
 | Claude Code | ~$20 | Monthly | Active |
 
-**Total Fixed Monthly:** ~€20
+**Total Fixed Monthly:** ~€27 ($7 Render + ~$20 Claude Code)
 
 ### 9.5 Freelancer Guidelines
 
