@@ -11,7 +11,7 @@ export default function Login() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { signIn, signUp, resetPassword, updatePassword, authEvent } = useAuth();
+  const { signIn, signUp, resetPassword: sendPasswordReset, updatePassword, authEvent } = useAuth();
 
   // Handle PASSWORD_RECOVERY event from magic link
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function Login() {
       } else if (mode === 'signIn') {
         await signIn(email, password);
       } else if (mode === 'forgotPassword') {
-        await resetPassword(email);
+        await sendPasswordReset(email);
         setMessage('Check your email for a password reset link!');
       } else if (mode === 'resetPassword') {
         if (password !== confirmPassword) {
