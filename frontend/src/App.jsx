@@ -82,35 +82,7 @@ function App() {
     setSelectedChannel(null);
   }, [selectedDepartment]);
 
-  // Load conversations and businesses on mount
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadConversations();
-      loadBusinesses();
-    }
-  }, [isAuthenticated]);
-
-  // Load conversation details when selected (skip temp conversations)
-  useEffect(() => {
-    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
-      loadConversation(currentConversationId);
-    }
-  }, [currentConversationId]);
-
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  // Show login if not authenticated OR if user needs to reset password
-  if (!isAuthenticated || authEvent === 'PASSWORD_RECOVERY') {
-    return <Login />;
-  }
-
+  // Define functions BEFORE useEffect hooks that reference them
   const loadBusinesses = async () => {
     try {
       const bizList = await api.listBusinesses();
@@ -141,6 +113,35 @@ function App() {
       console.error('Failed to load conversation:', error);
     }
   };
+
+  // Load conversations and businesses on mount
+  useEffect(() => {
+    if (isAuthenticated && authEvent !== 'PASSWORD_RECOVERY') {
+      loadConversations();
+      loadBusinesses();
+    }
+  }, [isAuthenticated, authEvent]);
+
+  // Load conversation details when selected (skip temp conversations)
+  useEffect(() => {
+    if (currentConversationId && !currentConversationId.startsWith('temp-')) {
+      loadConversation(currentConversationId);
+    }
+  }, [currentConversationId]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated OR if user needs to reset password
+  if (!isAuthenticated || authEvent === 'PASSWORD_RECOVERY') {
+    return <Login />;
+  }
 
   const handleNewConversation = () => {
     // Create a temporary conversation in memory only - don't persist until first message
