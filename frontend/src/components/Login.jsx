@@ -11,15 +11,15 @@ export default function Login() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { signIn, signUp, resetPassword: sendPasswordReset, updatePassword, authEvent } = useAuth();
+  const { signIn, signUp, resetPassword: sendPasswordReset, updatePassword, needsPasswordReset } = useAuth();
 
-  // Handle PASSWORD_RECOVERY event from magic link
+  // Handle password recovery mode
   useEffect(() => {
-    if (authEvent === 'PASSWORD_RECOVERY') {
+    if (needsPasswordReset) {
       setMode('resetPassword');
       setMessage('Please enter your new password.');
     }
-  }, [authEvent]);
+  }, [needsPasswordReset]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

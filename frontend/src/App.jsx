@@ -14,7 +14,7 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 function App() {
-  const { user, loading: authLoading, signOut, isAuthenticated, authEvent } = useAuth();
+  const { user, loading: authLoading, signOut, isAuthenticated, needsPasswordReset } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -116,11 +116,11 @@ function App() {
 
   // Load conversations and businesses on mount
   useEffect(() => {
-    if (isAuthenticated && authEvent !== 'PASSWORD_RECOVERY') {
+    if (isAuthenticated && !needsPasswordReset) {
       loadConversations();
       loadBusinesses();
     }
-  }, [isAuthenticated, authEvent]);
+  }, [isAuthenticated, needsPasswordReset]);
 
   // Load conversation details when selected (skip temp conversations)
   useEffect(() => {
@@ -139,7 +139,7 @@ function App() {
   }
 
   // Show login if not authenticated OR if user needs to reset password
-  if (!isAuthenticated || authEvent === 'PASSWORD_RECOVERY') {
+  if (!isAuthenticated || needsPasswordReset) {
     return <Login />;
   }
 
