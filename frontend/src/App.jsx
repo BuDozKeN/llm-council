@@ -14,7 +14,7 @@ const DEFAULT_DEPARTMENTS = [
 ];
 
 function App() {
-  const { user, loading: authLoading, signOut, isAuthenticated } = useAuth();
+  const { user, loading: authLoading, signOut, isAuthenticated, authEvent } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [currentConversation, setCurrentConversation] = useState(null);
@@ -106,8 +106,8 @@ function App() {
     );
   }
 
-  // Show login if not authenticated
-  if (!isAuthenticated) {
+  // Show login if not authenticated OR if user needs to reset password
+  if (!isAuthenticated || authEvent === 'PASSWORD_RECOVERY') {
     return <Login />;
   }
 
