@@ -122,13 +122,20 @@ function App() {
     }
   };
 
-  // Load conversations and businesses on mount
+  // Load conversations and businesses on mount (with token ready check)
   useEffect(() => {
-    if (isAuthenticated && !needsPasswordReset) {
-      loadConversations();
-      loadBusinesses();
-    }
-  }, [isAuthenticated, needsPasswordReset]);
+    const loadData = async () => {
+      if (isAuthenticated && !needsPasswordReset) {
+        // Wait for token to be available before loading
+        const token = await getAccessToken();
+        if (token) {
+          loadConversations();
+          loadBusinesses();
+        }
+      }
+    };
+    loadData();
+  }, [isAuthenticated, needsPasswordReset, getAccessToken]);
 
   // Load conversation details when selected (skip temp conversations)
   useEffect(() => {

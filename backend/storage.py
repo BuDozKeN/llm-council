@@ -161,10 +161,8 @@ def list_conversations(user_id: str) -> List[Dict[str, Any]]:
         msg_count_result = supabase.table('messages').select('id', count='exact').eq('conversation_id', conv['id']).execute()
         message_count = msg_count_result.count or 0
 
-        # Skip conversations with 0 messages
+        # Skip conversations with 0 messages (but don't auto-delete - they might be in progress)
         if message_count == 0:
-            # Delete empty conversations
-            supabase.table('conversations').delete().eq('id', conv['id']).execute()
             continue
 
         conversations.append({
