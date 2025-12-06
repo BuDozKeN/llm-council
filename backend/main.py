@@ -20,6 +20,12 @@ from . import org_sync
 
 app = FastAPI(title="LLM Council API")
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint to verify deployment."""
+    return {"status": "healthy", "version": "2025-12-06-v2"}
+
 # Enable CORS for local development
 app.add_middleware(
     CORSMiddleware,
